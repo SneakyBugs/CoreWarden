@@ -2,8 +2,10 @@ package filterlist
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/AdguardTeam/urlfilter"
 	agfilter "github.com/AdguardTeam/urlfilter/filterlist"
@@ -17,7 +19,7 @@ const ttl = 604800
 
 type FilterList struct {
 	Next   plugin.Handler
-	Engine urlfilter.DNSEngine
+	Engine *urlfilter.DNSEngine
 }
 
 func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -63,4 +65,37 @@ func CreateEngine(rules []string) (*urlfilter.DNSEngine, error) {
 		return nil, err
 	}
 	return urlfilter.NewDNSEngine(ruleStorage), nil
+}
+
+func CreateEngineFromRemote(
+	urls []string,
+	failuresUntilBackoff int,
+	backoffDuration time.Duration,
+	failuresUntilError int,
+) (*urlfilter.DNSEngine, error) {
+	lists := []string{}
+	anyFailed := false
+	for _, url := range urls {
+		fetcher := URLFetcher{
+			url: url,
+		}
+		retrier := Retrier{
+			fetcher: fetcher,
+			sleeper: RealSleeper{},
+		}
+		res, err := retrier.FetchWithRetryAndBackoff(failuresUntilBackoff, backoffDuration, failuresUntilError)
+		if err != nil {
+			anyFailed = true
+			continue
+		}
+		lists = append(lists, res)
+	}
+	engine, err := CreateEngine(lists)
+	if err != nil {
+		return nil, err
+	}
+	if anyFailed {
+		return engine, fmt.Errorf("partially fetched lists, engine may still be used")
+	}
+	return engine, nil
 }

@@ -42,6 +42,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/farsightsec/golang-framestream v0.3.0 // indirect
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
+	github.com/go-co-op/gocron v1.36.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
@@ -57,7 +58,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20230509042627-b1315fad0c5a // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
@@ -89,6 +90,7 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.1 // indirect
 	github.com/quic-go/quic-go v0.37.4 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
