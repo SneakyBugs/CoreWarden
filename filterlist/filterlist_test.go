@@ -15,7 +15,7 @@ func TestFilterlist(t *testing.T) {
 		t.Errorf("expected no error, but got %v", err)
 	}
 	fl := FilterList{
-		Engine: *engine,
+		Engine: engine,
 	}
 	tests := []struct {
 		qname        string
