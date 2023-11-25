@@ -11,11 +11,8 @@ COPY plugin.cfg /build/coredns/plugin.cfg
 COPY filterlist /build/coredns/plugin/filterlist
 
 RUN cd coredns && go mod tidy && go generate && go build
-# ENTRYPOINT ["/build/coredns/coredns"]
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/base-debian12:nonroot
 
-COPY --from=build --chown=nonroot /build/coredns/coredns /coredns
-USER nonroot:nonroot
-EXPOSE 53 53/udp
+COPY --from=build /build/coredns/coredns /
 ENTRYPOINT ["/coredns"]
