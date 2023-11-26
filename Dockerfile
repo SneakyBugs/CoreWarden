@@ -9,6 +9,7 @@ RUN wget -O coredns.tar.gz https://github.com/coredns/coredns/archive/refs/tags/
 
 COPY plugin.cfg /build/coredns/plugin.cfg
 COPY filterlist /build/coredns/plugin/filterlist
+COPY slog /build/coredns/plugin/slog
 
 RUN cd coredns && go mod tidy && go generate && go build
 
