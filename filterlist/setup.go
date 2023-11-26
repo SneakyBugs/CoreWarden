@@ -53,7 +53,7 @@ func setup(c *caddy.Controller) error {
 	})
 
 	cron := gocron.NewScheduler(time.UTC)
-	cron.Every(6).Hours().Do(func() {
+	_, err = cron.Every(6).Hours().Do(func() {
 		engine, err := CreateEngineFromRemote(listURLs, 5, time.Minute*5, 15)
 		if err != nil {
 			// TODO Log
@@ -71,5 +71,5 @@ func setup(c *caddy.Controller) error {
 		cron.Stop()
 		return nil
 	})
-	return nil
+	return err
 }
