@@ -26,6 +26,7 @@ func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 	state := request.Request{W: w, Req: r}
 	hostname := strings.TrimSuffix(state.Name(), ".")
 
+	requestsTotal.Add(1)
 	matchResult, ok := fl.Engine.MatchRequest(&urlfilter.DNSRequest{
 		Hostname: hostname,
 		DNSType:  state.QType(),
@@ -34,6 +35,7 @@ func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 		return plugin.NextOrFailure(fl.Name(), fl.Next, ctx, w, r)
 	}
 	if matchResult.NetworkRule != nil || matchResult.HostRulesV4 != nil || matchResult.HostRulesV6 != nil {
+		requestsBlocked.Add(1)
 		m := new(dns.Msg)
 		m.SetReply(r)
 		hdr := dns.RR_Header{Name: state.QName(), Ttl: ttl, Class: dns.ClassINET, Rrtype: dns.TypeA}

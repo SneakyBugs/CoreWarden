@@ -22,7 +22,7 @@ filterlist {
 - `coredns_filterlist_list_fetch_failures` - count of list fetch failures.
 - `coredns_filterlist_list_fetches_total` - count of total list fetches.
 - `coredns_filterlist_requests_blocked` - count of blocked queries.
-- `coredns_filterlist_rules_total` - count of rules in all blocklists.
+- `coredns_filterlist_requests_total` - count of handled queries, useful because this plugin runs behind `cache`.
 
 ## Examples
 

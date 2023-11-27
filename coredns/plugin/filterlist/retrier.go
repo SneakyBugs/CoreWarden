@@ -18,11 +18,14 @@ func (r Retrier) FetchWithRetryAndBackoff(failuresUntilBackoff int, backoffWait 
 	remainingUntilBackoff := failuresUntilBackoff
 	for failures := 0; failures < failuresUntilError; failures++ {
 		res, err := r.fetcher.Fetch()
+		listFetchesTotal.Add(1)
 		if err == nil {
 			return res, nil
 		}
+		listFetchFailures.Add(1)
 		remainingUntilBackoff--
 		if remainingUntilBackoff == 0 {
+			listFetchBackoffs.Add(1)
 			remainingUntilBackoff = failuresUntilBackoff
 			r.sleeper.Sleep(backoffWait)
 		}
