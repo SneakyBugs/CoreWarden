@@ -22,6 +22,15 @@ func (sl SLog) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	returnCode, err := plugin.NextOrFailure(sl.Name(), sl.Next, ctxWithLogger, w, r)
 
 	state := request.Request{W: w, Req: r}
+	if err != nil {
+		sl.Logger.Error("request error",
+			zap.String("error", err.Error()),
+			zap.String("rcode", dns.RcodeToString[returnCode]),
+			zap.String("name", state.Name()),
+			zap.String("type", state.Type()),
+		)
+	}
+
 	sl.Logger.Info("client request",
 		zap.String("type", state.Type()),
 		zap.String("name", state.Name()),
@@ -29,7 +38,6 @@ func (sl SLog) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		zap.String("remote", state.IP()),
 		zap.Int("size", state.Size()),
 		zap.String("rcode", dns.RcodeToString[returnCode]),
-		// TODO Add trace ID.
 	)
 	return returnCode, err
 }
