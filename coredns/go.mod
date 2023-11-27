@@ -1,4 +1,4 @@
-module git.houseofkummer.com/lior/home-dns
+module git.houseofkummer.com/lior/home-dns/coredns
 
 go 1.21.3
 

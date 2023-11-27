@@ -24,7 +24,7 @@ func (sl SLog) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	state := request.Request{W: w, Req: r}
 	if err != nil {
 		sl.Logger.Error("request error",
-			zap.String("error", err.Error()),
+			zap.Error(err),
 			zap.String("rcode", dns.RcodeToString[returnCode]),
 			zap.String("name", state.Name()),
 			zap.String("type", state.Type()),

@@ -53,5 +53,12 @@ func setup(c *caddy.Controller) error {
 		)
 		return nil
 	})
+
+	c.Set(contextKeyLogger, logger)
 	return nil
+}
+
+func LoggerFromController(c *caddy.Controller) (*zap.Logger, bool) {
+	logger, ok := c.Get(contextKeyLogger).(*zap.Logger)
+	return logger, ok
 }

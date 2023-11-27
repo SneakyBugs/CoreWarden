@@ -10,6 +10,8 @@ RUN wget -O coredns.tar.gz https://github.com/coredns/coredns/archive/refs/tags/
 COPY plugin.cfg /build/coredns/plugin.cfg
 COPY plugin /build/coredns/plugin
 
+# Change imports of plugins.
+RUN sed 's:git.houseofkummer.com/lior/home-dns:github.com/coredns:' -i coredns/plugin/**/*.go
 RUN cd coredns && go mod tidy && go generate && go build
 
 FROM gcr.io/distroless/base-debian12:nonroot

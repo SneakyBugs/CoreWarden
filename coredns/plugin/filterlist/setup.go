@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"git.houseofkummer.com/lior/home-dns/coredns/plugin/slog"
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/go-co-op/gocron"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -38,14 +40,24 @@ func setup(c *caddy.Controller) error {
 		return plugin.Error("filterlist", c.Errf("blocklists property is required"))
 	}
 
+	logger, ok := slog.LoggerFromController(c)
+	if !ok {
+		return fmt.Errorf("must have slog plugin enabled")
+	}
+
 	// No backoff when fetching in init to crash pod.
+	blocklistFetchStart := time.Now()
 	engine, err := CreateEngineFromRemote(listURLs, 5, time.Minute*5, 5)
 	if err != nil {
-		// TODO Log
-		fmt.Printf("init error %v\n", err)
+		logger.Error("failed to fetch blocklists after retrying 5 times",
+			zap.Error(err),
+		)
 		return err
 	}
-	filterlistPlugin := FilterList{Engine: engine}
+	logger.Info("blocklists fetched",
+		zap.Duration("duration", time.Since(blocklistFetchStart)),
+	)
+	filterlistPlugin := FilterList{Engine: engine, Logger: logger}
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		filterlistPlugin.Next = next
@@ -54,13 +66,18 @@ func setup(c *caddy.Controller) error {
 
 	cron := gocron.NewScheduler(time.UTC)
 	_, err = cron.Every(6).Hours().Do(func() {
+		blocklistFetchStart := time.Now()
 		engine, err := CreateEngineFromRemote(listURLs, 5, time.Minute*5, 15)
 		if err != nil {
-			// TODO Log
-			fmt.Printf("cron error %v\n", err)
+			logger.Error("failed to fetch blocklists after retrying 15 times",
+				zap.Error(err),
+			)
 			return
 		}
 		filterlistPlugin.Engine = engine
+		logger.Info("blocklists fetched",
+			zap.Duration("duration", time.Since(blocklistFetchStart)),
+		)
 	})
 
 	c.OnStartup(func() error {

@@ -12,6 +12,7 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
+	"go.uber.org/zap"
 )
 
 const name = "filterlist"
@@ -20,6 +21,7 @@ const ttl = 604800
 type FilterList struct {
 	Next   plugin.Handler
 	Engine *urlfilter.DNSEngine
+	Logger *zap.Logger
 }
 
 func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -34,19 +36,37 @@ func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 	if !ok {
 		return plugin.NextOrFailure(fl.Name(), fl.Next, ctx, w, r)
 	}
-	if matchResult.NetworkRule != nil || matchResult.HostRulesV4 != nil || matchResult.HostRulesV6 != nil {
-		requestsBlocked.Add(1)
+	listID, ok := getMatchingListID(matchResult)
+	if ok {
 		m := new(dns.Msg)
 		m.SetReply(r)
 		hdr := dns.RR_Header{Name: state.QName(), Ttl: ttl, Class: dns.ClassINET, Rrtype: dns.TypeA}
 		m.Answer = []dns.RR{&dns.A{Hdr: hdr, A: net.ParseIP("0.0.0.0").To4()}}
 		m.Rcode = dns.RcodeSuccess
+		requestsBlocked.Add(1)
+		fl.Logger.Info("request blocked",
+			zap.String("name", state.Name()),
+			zap.Int("blocklist", listID),
+		)
 		return m.Rcode, w.WriteMsg(m)
 
 	}
 	// Only DNS rewrite rules were matched.
 	// We ignore them, as they may lead to DNS hijack through blocklists.
 	return plugin.NextOrFailure(fl.Name(), fl.Next, ctx, w, r)
+}
+
+func getMatchingListID(result *urlfilter.DNSResult) (int, bool) {
+	if result.NetworkRule != nil {
+		return result.NetworkRule.FilterListID, true
+	}
+	if result.HostRulesV4 != nil {
+		return result.HostRulesV4[0].FilterListID, true
+	}
+	if result.HostRulesV6 != nil {
+		return result.HostRulesV6[0].FilterListID, true
+	}
+	return -1, false
 }
 
 func (fl FilterList) Name() string {
