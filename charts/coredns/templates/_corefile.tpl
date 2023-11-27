@@ -1,6 +1,6 @@
 {{- define "coredns.corefile" }}
 . {
-  slog
+  cache
   errors
   filterlist {
     blocklists https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
@@ -11,5 +11,6 @@
   }
   health
   ready
+  slog
 }
 {{- end }}
