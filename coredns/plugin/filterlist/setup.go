@@ -27,9 +27,7 @@ func setup(c *caddy.Controller) error {
 				if len(args) == 0 {
 					return c.ArgErr()
 				}
-				for _, url := range args {
-					listURLs = append(listURLs, url)
-				}
+				listURLs = append(listURLs, args...)
 			default:
 				return plugin.Error("filterlist", c.Errf("unknown property %q", c.Val()))
 			}
