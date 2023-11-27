@@ -11,6 +11,20 @@ config:
     #   - "@ 3600 IN A 127.0.0.1"
     #   - "@ 3600 IN AAAA ::1"
 
+  # DNS servers requests are being forwarded to.
+  # Upstream servers must use TLS.
+  upstream:
+    servers:
+      - tls://1.1.1.1
+      - tls://1.0.0.1
+    name: cloudflare-dns.com
+
+  # Filter lists for ad blocking.
+  # Supports hosts style lists, domain lists, and adblock rule lists.
+  filter:
+    blocklists:
+      - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+
 replicaCount: 1
 
 image:

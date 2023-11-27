@@ -4,10 +4,10 @@
   errors
   file /etc/coredns/Zonefile
   filterlist {
-    blocklists https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+    blocklists{{ range .Values.config.filter.blocklists }} {{ . }}{{ end }}
   }
-  forward . tls://1.1.1.1 tls://1.0.0.1 {
-    tls_servername cloudflare-dns.com
+  forward .{{ range .Values.config.upstream.servers }} {{ . }}{{ end }} {
+    tls_servername {{ .Values.config.upstream.name }}
     health_check 5s
   }
   health
