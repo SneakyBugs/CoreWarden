@@ -7,6 +7,7 @@ import (
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/miekg/dns"
+	"go.uber.org/zap"
 )
 
 func TestFilterlist(t *testing.T) {
@@ -16,6 +17,7 @@ func TestFilterlist(t *testing.T) {
 	}
 	fl := FilterList{
 		Engine: engine,
+		Logger: zap.NewNop(),
 	}
 	tests := []struct {
 		qname        string

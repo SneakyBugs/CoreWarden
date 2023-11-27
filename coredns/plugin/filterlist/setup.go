@@ -1,7 +1,6 @@
 package filterlist
 
 import (
-	"fmt"
 	"time"
 
 	"git.houseofkummer.com/lior/home-dns/coredns/plugin/slog"
@@ -42,7 +41,8 @@ func setup(c *caddy.Controller) error {
 
 	logger, ok := slog.LoggerFromController(c)
 	if !ok {
-		return fmt.Errorf("must have slog plugin enabled")
+		// Use no-op logger when slog plugin is not configured.
+		logger = zap.NewNop()
 	}
 
 	filterlistPlugin := &FilterList{Logger: logger}
