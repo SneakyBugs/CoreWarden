@@ -25,6 +25,14 @@ config:
     blocklists:
       - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
 
+podMonitor:
+  # Set to true to create PodMonitor resources to collect metrics from CoreDNS.
+  enabled: false
+  # Additional labels for PodMonitor to change which selector matches it.
+  # Default labels match the default PodMonitor selector of kube-prometheus-stack.
+  selector:
+    release: prometheus
+
 replicaCount: 1
 
 image:
