@@ -2,3 +2,4 @@
 *.tfstate
 *.tfstate.backup
 kubeconfig.yaml
+build
