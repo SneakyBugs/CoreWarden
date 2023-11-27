@@ -10,6 +10,7 @@
     health_check 5s
   }
   health
+  prometheus
   ready
   slog
 }

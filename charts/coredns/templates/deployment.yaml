@@ -44,6 +44,9 @@ spec:
             - name: ready
               containerPort: 8181
               protocol: TCP
+            - name: metrics
+              containerPort: 9153
+              protocol: TCP
             - name: dns-tcp
               containerPort: 53
               protocol: TCP
