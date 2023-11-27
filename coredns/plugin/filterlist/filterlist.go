@@ -73,6 +73,10 @@ func (fl FilterList) Name() string {
 	return name
 }
 
+func (fl FilterList) Ready() bool {
+	return fl.Engine != nil
+}
+
 func CreateEngine(rules []string) (*urlfilter.DNSEngine, error) {
 	ruleLists := []agfilter.RuleList{}
 	for i, ruleList := range rules {

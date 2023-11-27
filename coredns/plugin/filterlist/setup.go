@@ -45,27 +45,14 @@ func setup(c *caddy.Controller) error {
 		return fmt.Errorf("must have slog plugin enabled")
 	}
 
-	// No backoff when fetching in init to crash pod.
-	blocklistFetchStart := time.Now()
-	engine, err := CreateEngineFromRemote(listURLs, 5, time.Minute*5, 5)
-	if err != nil {
-		logger.Error("failed to fetch blocklists after retrying 5 times",
-			zap.Error(err),
-		)
-		return err
-	}
-	logger.Info("blocklists fetched",
-		zap.Duration("duration", time.Since(blocklistFetchStart)),
-	)
-	filterlistPlugin := FilterList{Engine: engine, Logger: logger}
-
+	filterlistPlugin := &FilterList{Logger: logger}
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		filterlistPlugin.Next = next
 		return filterlistPlugin
 	})
 
 	cron := gocron.NewScheduler(time.UTC)
-	_, err = cron.Every(6).Hours().Do(func() {
+	_, err := cron.Every(6).Hours().Do(func() {
 		blocklistFetchStart := time.Now()
 		engine, err := CreateEngineFromRemote(listURLs, 5, time.Minute*5, 15)
 		if err != nil {
