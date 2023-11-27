@@ -22,11 +22,36 @@ func setup(c *caddy.Controller) error {
 	if err != nil {
 		return err
 	}
-	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
+	config := dnsserver.GetConfig(c)
+	if config == nil {
+		return fmt.Errorf("failed to get DNS server config")
+	}
+	config.AddPlugin(func(next plugin.Handler) plugin.Handler {
 		return SLog{
 			Next:   next,
 			Logger: logger,
 		}
+	})
+
+	hosts := config.ListenHosts
+	if len(hosts) == 0 && hosts[0] == "" {
+		hosts = []string{"*"}
+	}
+	c.OnStartup(func() error {
+		logger.Info("starting up",
+			zap.String("zone", config.Zone),
+			zap.String("port", config.Port),
+			zap.Strings("hosts", hosts),
+		)
+		return nil
+	})
+	c.OnShutdown(func() error {
+		logger.Info("shutting down",
+			zap.String("zone", config.Zone),
+			zap.String("port", config.Port),
+			zap.Strings("hosts", hosts),
+		)
+		return nil
 	})
 	return nil
 }
