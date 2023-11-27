@@ -2,7 +2,9 @@
 . {
   cache
   errors
+  {{- with .Values.config.zones }}
   file /etc/coredns/Zonefile
+  {{- end }}
   filterlist {
     blocklists{{ range .Values.config.filter.blocklists }} {{ . }}{{ end }}
   }
