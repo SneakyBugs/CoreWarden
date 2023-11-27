@@ -76,6 +76,8 @@ spec:
             items:
               - key: Corefile
                 path: Corefile
+              - key: Zonefile
+                path: Zonefile
       {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}

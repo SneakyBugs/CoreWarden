@@ -2,6 +2,15 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+config:
+  # Zone rewrites.
+  # You can configure record rewrites in RFC 1035 text format.
+  # See example below and https://coredns.io/plugins/file/
+  zones: {}
+    # example.com:
+    #   - "@ 3600 IN A 127.0.0.1"
+    #   - "@ 3600 IN AAAA ::1"
+
 replicaCount: 1
 
 image:

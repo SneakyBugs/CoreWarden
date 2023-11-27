@@ -7,3 +7,5 @@ metadata:
 data:
   Corefile: |-
     {{- include "coredns.corefile" . | nindent 4 }}
+  Zonefile: |-
+    {{- include "coredns.zonefile" . | nindent 4 }}
