@@ -13,7 +13,7 @@
     health_check 5s
   }
   health
-  prometheus
+  prometheus 0.0.0.0:9153
   ready
   slog
 }
