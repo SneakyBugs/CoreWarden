@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package resolver;
+
+option go_package = "git.houseofkummer.com/lior/home-dns/api/resolver";
+
+service Resolver {
+	rpc Resolve(Question) returns (Response) {}
+}
+
+message Question {
+	string name = 1;
+	uint32 qtype = 2;
+	// No need for qclass since it is always INET.
+}
+
+message Response {
+	repeated string answer = 1;
+	repeated string ns = 2;
+	repeated string extra = 3;
+}
