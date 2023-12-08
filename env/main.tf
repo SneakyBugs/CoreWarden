@@ -11,7 +11,7 @@ resource "k3d_cluster" "cluster" {
   name = "dns-dev"
   # See https://k3d.io/v5.4.6/usage/configfile/#config-options
   k3d_config = <<EOF
-apiVersion: k3d.io/v1alpha4
+apiVersion: k3d.io/v1alpha5
 kind: Simple
 
 # Expose ports 80 via 8080 and 443 via 8443.
@@ -67,5 +67,36 @@ houseofkummer.com:53 {
   forward . 192.168.0.180:53
 }
 EOF
+  }
+}
+
+resource "kubernetes_secret" "postgres_credentials" {
+  metadata {
+    name = "postgres-credentials"
+  }
+
+  data = {
+    "postgres-password"    = "development"
+    "password"             = "development"
+    "replication-password" = "development"
+    "username"             = "development"
+  }
+}
+
+resource "helm_release" "database" {
+  name       = "postgres"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "postgresql"
+  set {
+    name  = "auth.existingSecret"
+    value = "postgres-credentials"
+  }
+  set {
+    name  = "auth.username"
+    value = "development"
+  }
+  set {
+    name  = "auth.database"
+    value = "development"
   }
 }
