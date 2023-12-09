@@ -2,14 +2,21 @@ stages:
   - validate
   - deliver
 
-lint:
+lint:coredns:
   stage: validate
   image: golangci/golangci-lint:v1.55.2
   script:
     - cd coredns
     - golangci-lint run ./...
 
-unit-test:
+lint:api:
+  stage: validate
+  image: golangci/golangci-lint:v1.55.2
+  script:
+    - cd api
+    - golangci-lint run ./...
+
+test:coredns:
   stage: validate
   image: golang:1.21.4-bookworm
   script:
@@ -20,9 +27,28 @@ unit-test:
   artifacts:
     when: always
     reports:
-      junit: backend/report.xml
+      junit: coredns/report.xml
 
-e2e-test:
+test:api:
+  stage: validate
+  image: golang:1.21.4-bookworm
+  variables:
+    POSTGRES_DB: "development"
+    POSTGRES_USER: "development"
+    POSTGRES_PASSWORD: "development"
+  services:
+    - name: postgres:16.1-alpine
+  script:
+    - cd api
+    # Use gotestsum to generate a JUnit-like report.
+    # Pass options (after --) to make go test generate a coverage report.
+    - go run gotest.tools/gotestsum@latest --junitfile report.xml --format testname
+  artifacts:
+    when: always
+    reports:
+      junit: api/report.xml
+
+test:e2e:
   stage: validate
   image: golang:1.21.4-bookworm
   script:
@@ -33,7 +59,7 @@ e2e-test:
     - cd test
     - ./test.sh
 
-charts-lint:
+lint:charts:
   stage: validate
   image: docker.houseofkummer.com/homelab/dockops:0.6.0
   script:
@@ -41,7 +67,7 @@ charts-lint:
     - helm lint --strict *
     - kube-linter lint *
 
-image-publish:
+publish:coredns:
   stage: deliver
   image:
     name: gcr.io/kaniko-project/executor:debug
@@ -52,13 +78,8 @@ image-publish:
     - /kaniko/executor --context $CI_PROJECT_DIR/coredns --dockerfile $CI_PROJECT_DIR/coredns/Dockerfile --destination $CI_REGISTRY_IMAGE/coredns:$CI_COMMIT_TAG
   rules:
     - if: $CI_COMMIT_TAG
-  needs:
-    - lint
-    - unit-test
-    - e2e-test
-    - charts-lint
 
-charts-publish:
+publish:charts:
   stage: deliver
   image: docker.houseofkummer.com/homelab/dockops:0.6.0
   script:
@@ -67,8 +88,4 @@ charts-publish:
   rules:
     - if: $CI_COMMIT_TAG
   needs:
-    - lint
-    - unit-test
-    - e2e-test
-    - charts-lint
-    - image-publish
+    - publish:coredns
