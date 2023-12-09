@@ -15,7 +15,7 @@ type Options struct {
 	ConnectionString string
 }
 
-func NewService(lc fx.Lifecycle, options Options) (*Storage, error) {
+func NewService(lc fx.Lifecycle, options Options) (Storage, error) {
 	pool, err := pgxpool.New(context.Background(), options.ConnectionString)
 	if err != nil {
 		return nil, err
@@ -40,5 +40,5 @@ func NewService(lc fx.Lifecycle, options Options) (*Storage, error) {
 			return nil
 		}},
 	)
-	return &Storage{queries: queries.New(pool)}, nil
+	return &PostgresStorage{queries: queries.New(pool)}, nil
 }

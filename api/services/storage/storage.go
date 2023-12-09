@@ -10,15 +10,17 @@ import (
 	"go.uber.org/zap"
 )
 
-type Storage struct {
+type Storage interface {
+	Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error)
+	CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error)
+}
+
+type PostgresStorage struct {
 	queries *queries.Queries
 	logger  *zap.Logger
 }
 
-func (s *Storage) Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error) {
-	// TODO Use dns.IsDomainName for verification?
-	// Check if CoreDNS already does.
-	// TODO Use dns.Fqdn?
+func (s *PostgresStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error) {
 	r, err := s.queries.ResolveRecord(ctx, queries.ResolveRecordParams{
 		Name: q.Name,
 		Type: int32(q.Qtype),
@@ -95,7 +97,7 @@ type DNSResponse struct {
 	Extra  []string
 }
 
-func (s *Storage) CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error) {
+func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error) {
 	rr, err := dns.NewRR(p.RR)
 	if err != nil {
 		return Record{}, fmt.Errorf("failed to parse RR: %v", err)

@@ -14,7 +14,7 @@ type service struct {
 	handler Resolver
 }
 
-func Register(e *grpc.Server, s *storage.Storage) {
+func Register(e *grpc.Server, s storage.Storage) {
 	resolver.RegisterResolverServer(e, &service{
 		handler: s,
 	})

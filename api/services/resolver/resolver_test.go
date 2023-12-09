@@ -2,17 +2,15 @@ package resolver
 
 import (
 	"context"
-	"database/sql"
+	"fmt"
 	"net"
 	"testing"
 
-	"git.houseofkummer.com/lior/home-dns/api/database"
 	"git.houseofkummer.com/lior/home-dns/api/resolver"
 	grpcs "git.houseofkummer.com/lior/home-dns/api/services/grpc"
 	"git.houseofkummer.com/lior/home-dns/api/services/logger"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
 	"github.com/miekg/dns"
-	migrate "github.com/rubenv/sql-migrate"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,18 +18,8 @@ import (
 )
 
 func TestResolve(t *testing.T) {
-	client, closer, store := createTestClient(t)
-	// Why does it not function?
+	client, closer := createTestClient(t)
 	defer closer(context.Background())
-
-	_, err := store.CreateRecord(context.Background(), storage.RecordCreateParameters{
-		Zone:    "example.com",
-		RR:      "foo IN A 192.0.0.1",
-		Comment: "test",
-	})
-	if err != nil {
-		t.Fatalf("expected to create record with no error, got %v", err)
-	}
 
 	resp, err := client.Resolve(
 		context.Background(),
@@ -49,34 +37,20 @@ func TestResolve(t *testing.T) {
 	if len(resp.Answer) != 1 {
 		t.Fatalf("expected answer length 1, got %d\n", len(resp.Answer))
 	}
-	closer(context.Background())
 }
 
-func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Context), *storage.Storage) {
-	migrations := database.GetMigrations()
-	db, err := sql.Open("pgx", "postgres://development:development@localhost:5432/development?sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
-	_, err = migrate.Exec(db, "postgres", migrations, migrate.Down)
-	if err != nil {
-		panic(err)
-	}
-
+func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Context)) {
 	lis := bufconn.Listen(10 * 1024 * 1024)
-	var store *storage.Storage
+	var store storage.Storage
 	app := fx.New(
-		fx.Supply(
-			storage.Options{
-				ConnectionString: "postgres://development:development@localhost:5432/development?sslmode=disable",
-			},
-		),
 		fx.Provide(
 			grpcs.NewService,
 			logger.NewService,
-			storage.NewService,
 			func() net.Listener {
 				return lis
+			},
+			func() storage.Storage {
+				return &MockStorage{}
 			},
 		),
 		fx.Invoke(
@@ -107,5 +81,17 @@ func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Conte
 	return resolver.NewResolverClient(conn), func(ctx context.Context) {
 		app.Stop(ctx)
 		lis.Close()
-	}, store
+	}
+}
+
+type MockStorage struct{}
+
+func (s *MockStorage) Resolve(ctx context.Context, q storage.DNSQuestion) (storage.DNSResponse, error) {
+	return storage.DNSResponse{
+		Answer: []string{q.Name + "\tIN\tA\t127.0.0.1"},
+	}, nil
+}
+
+func (s *MockStorage) CreateRecord(ctx context.Context, p storage.RecordCreateParameters) (storage.Record, error) {
+	return storage.Record{}, fmt.Errorf("not implemented")
 }

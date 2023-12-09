@@ -251,7 +251,7 @@ func TestResolvePrecedenceOverWildcard(t *testing.T) {
 	}
 }
 
-func createTestStorage() (s *Storage, closer func(context.Context)) {
+func createTestStorage() (s Storage, closer func(context.Context)) {
 	migrations := database.GetMigrations()
 	db, err := sql.Open("pgx", "postgres://development:development@localhost:5432/development?sslmode=disable")
 	if err != nil {
