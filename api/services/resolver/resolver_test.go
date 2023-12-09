@@ -79,7 +79,10 @@ func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Conte
 	}
 
 	return resolver.NewResolverClient(conn), func(ctx context.Context) {
-		app.Stop(ctx)
+		err := app.Stop(ctx)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
 		lis.Close()
 	}
 }

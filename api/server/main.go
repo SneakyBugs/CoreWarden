@@ -10,5 +10,8 @@ import (
 func main() {
 	app := services.NewApp(services.Options{})
 	fmt.Println("Hello world!")
-	app.Start(context.Background())
+	err := app.Start(context.Background())
+	if err != nil {
+		panic(err)
+	}
 }

@@ -7,7 +7,6 @@ import (
 
 	"git.houseofkummer.com/lior/home-dns/api/database/queries"
 	"github.com/miekg/dns"
-	"go.uber.org/zap"
 )
 
 type Storage interface {
@@ -17,7 +16,6 @@ type Storage interface {
 
 type PostgresStorage struct {
 	queries *queries.Queries
-	logger  *zap.Logger
 }
 
 func (s *PostgresStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error) {

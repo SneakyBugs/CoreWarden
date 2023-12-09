@@ -279,7 +279,10 @@ func createTestStorage() (s Storage, closer func(context.Context)) {
 		app.Run()
 	}()
 	closer = func(ctx context.Context) {
-		app.Stop(ctx)
+		err := app.Stop(ctx)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
 	}
 
 	return
