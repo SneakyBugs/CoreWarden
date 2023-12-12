@@ -29,3 +29,7 @@ func NewService(lc fx.Lifecycle, o Options) *chi.Mux {
 	})
 	return r
 }
+
+func NewMockService(lc fx.Lifecycle) *chi.Mux {
+	return chi.NewRouter()
+}

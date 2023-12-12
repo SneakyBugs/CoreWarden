@@ -46,11 +46,9 @@ func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Conte
 		fx.Provide(
 			grpcs.NewService,
 			logger.NewService,
+			storage.NewMockService,
 			func() net.Listener {
 				return lis
-			},
-			func() storage.Storage {
-				return &MockStorage{}
 			},
 		),
 		fx.Invoke(
@@ -85,16 +83,4 @@ func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Conte
 		}
 		lis.Close()
 	}
-}
-
-type MockStorage struct{}
-
-func (s *MockStorage) Resolve(ctx context.Context, q storage.DNSQuestion) (storage.DNSResponse, error) {
-	return storage.DNSResponse{
-		Answer: []string{q.Name + "\tIN\tA\t127.0.0.1"},
-	}, nil
-}
-
-func (s *MockStorage) CreateRecord(ctx context.Context, p storage.RecordCreateParameters) (storage.Record, error) {
-	return storage.Record{}, fmt.Errorf("not implemented")
 }
