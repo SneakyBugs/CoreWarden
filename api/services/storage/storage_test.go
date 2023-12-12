@@ -202,7 +202,6 @@ func TestResolveWildcardPrecedence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to resolve: %v\n", err)
 	}
-	fmt.Println(res.Answer)
 	if len(res.Answer) != 1 {
 		t.Fatalf("expected answer length 1, got %d\n", len(res.Answer))
 	}

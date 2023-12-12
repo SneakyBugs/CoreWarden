@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"log"
 
 	"git.houseofkummer.com/lior/home-dns/api/resolver"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
@@ -21,7 +20,6 @@ func Register(e *grpc.Server, s storage.Storage) {
 }
 
 func (s *service) Resolve(ctx context.Context, q *resolver.Question) (*resolver.Response, error) {
-	log.Printf("Received query for %v\n", q.Name)
 	resp, err := s.handler.Resolve(ctx, storage.DNSQuestion{
 		Name:  q.Name,
 		Qtype: uint16(q.Qtype),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"git.houseofkummer.com/lior/home-dns/api/database/queries"
 	"github.com/miekg/dns"
@@ -12,6 +13,7 @@ import (
 type Storage interface {
 	Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error)
 	CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error)
+	// ReadRecord(ctx context.Context, id int) (Record, error)
 }
 
 type PostgresStorage struct {
@@ -138,9 +140,10 @@ type RecordCreateParameters struct {
 }
 
 type Record struct {
-	ID      int
-	Zone    string
-	RR      string
-	Comment string
-	// TODO CreatedAt, UpdatedOn
+	ID        int
+	Zone      string
+	RR        string
+	Comment   string
+	CreatedAt time.Time
+	UpdatedOn time.Time
 }

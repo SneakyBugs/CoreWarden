@@ -13,9 +13,12 @@ func NewService(lc fx.Lifecycle, lis net.Listener) *grpc.Server {
 	s := grpc.NewServer()
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			if err := s.Serve(lis); err != nil {
-				return err
-			}
+			go func() {
+				if err := s.Serve(lis); err != nil {
+					// TODO structured log
+					panic(err)
+				}
+			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
