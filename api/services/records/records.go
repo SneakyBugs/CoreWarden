@@ -9,6 +9,7 @@ import (
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
 	"github.com/go-chi/render"
 	"github.com/miekg/dns"
+	"go.uber.org/zap"
 )
 
 type RecordsStorage interface {
@@ -19,6 +20,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &RecordCreateRequest{}
 		if err := render.Bind(r, data); err != nil {
+			s.logger.Error("failed to bind body", zap.Error(err))
 			rest.RenderError(w, r, err)
 			return
 		}
@@ -28,9 +30,16 @@ func (s service) HandleCreate() http.HandlerFunc {
 			Comment: data.Comment,
 		})
 		if err != nil {
+			s.logger.Error("failed to create record", zap.Error(err))
 			rest.RenderError(w, r, &rest.InternalServerError)
 			return
 		}
+		s.logger.Info(
+			"record created",
+			zap.String("zone", record.Zone),
+			zap.String("rr", record.RR),
+			zap.String("comment", record.Comment),
+		)
 		render.Status(r, http.StatusCreated)
 		render.JSON(w, r, RecordResponse{
 			ID:        record.ID,

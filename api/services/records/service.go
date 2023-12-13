@@ -11,11 +11,10 @@ type service struct {
 	logger  *zap.Logger
 }
 
-func Register(r *chi.Mux, s storage.Storage) {
-	logger, _ := zap.NewProduction()
+func Register(r *chi.Mux, s storage.Storage, l *zap.Logger) {
 	sr := service{
 		handler: s,
-		logger:  logger,
+		logger:  l,
 	}
 	r.Post("/v1/records", sr.HandleCreate())
 }

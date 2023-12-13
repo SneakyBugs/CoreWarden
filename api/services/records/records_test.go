@@ -186,6 +186,7 @@ func createTestHandler(returnErrors bool) http.Handler {
 			},
 		),
 		fx.Provide(
+			logger.NewService,
 			rest.NewMockService,
 			storage.NewMockService,
 		),
