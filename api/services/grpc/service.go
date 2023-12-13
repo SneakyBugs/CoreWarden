@@ -5,18 +5,24 @@ import (
 	"fmt"
 	"net"
 
+	"git.houseofkummer.com/lior/home-dns/api/services/logger"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
-func NewService(lc fx.Lifecycle, lis net.Listener) *grpc.Server {
-	s := grpc.NewServer()
+func NewService(lc fx.Lifecycle, lis net.Listener, l *zap.Logger) *grpc.Server {
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(logger.LoggerInterceptor(l)),
+	)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				if err := s.Serve(lis); err != nil {
-					// TODO structured log
-					panic(err)
+					l.Error(
+						"gRPC server error",
+						zap.Error(err),
+					)
 				}
 			}()
 			return nil
