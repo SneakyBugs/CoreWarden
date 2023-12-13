@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/fx"
 )
 
@@ -14,7 +15,7 @@ type Options struct {
 }
 
 func NewService(lc fx.Lifecycle, o Options) *chi.Mux {
-	r := chi.NewRouter()
+	r := newRouter()
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", o.Port),
 		Handler: r,
@@ -34,5 +35,11 @@ func NewService(lc fx.Lifecycle, o Options) *chi.Mux {
 }
 
 func NewMockService(lc fx.Lifecycle) *chi.Mux {
-	return chi.NewRouter()
+	return newRouter()
+}
+
+func newRouter() *chi.Mux {
+	r := chi.NewRouter()
+	r.Use(middleware.RealIP)
+	return r
 }

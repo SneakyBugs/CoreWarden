@@ -34,12 +34,13 @@ func NewApp(options Options) *fx.App {
 			storage.NewService,
 		),
 		fx.Invoke(
+			logger.Register,
 			resolver.Register,
 			records.Register,
 		),
-		// fx.WithLogger(
-		// 	logger.NewFxLogger,
-		// ),
+		fx.WithLogger(
+			logger.NewFxLogger,
+		),
 	)
 	return app
 }
