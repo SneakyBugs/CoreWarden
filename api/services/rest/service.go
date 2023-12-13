@@ -15,16 +15,19 @@ type Options struct {
 
 func NewService(lc fx.Lifecycle, o Options) *chi.Mux {
 	r := chi.NewRouter()
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", o.Port),
+		Handler: r,
+	}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
-				err := http.ListenAndServe(fmt.Sprintf(":%d", o.Port), r)
-				if err != nil {
-					// TODO structured log
-					panic(err)
-				}
+				_ = server.ListenAndServe()
 			}()
 			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return server.Shutdown(ctx)
 		},
 	})
 	return r
