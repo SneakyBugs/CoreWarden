@@ -28,6 +28,10 @@ func (s *service) Resolve(ctx context.Context, q *resolver.Question) (*resolver.
 		Qtype: uint16(q.Qtype),
 	})
 	if err != nil {
+		s.logger.Error(
+			"DNS request error",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 	s.logger.Info(

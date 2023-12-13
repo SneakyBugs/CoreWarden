@@ -2,6 +2,7 @@ package records
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestCreateRecord(t *testing.T) {
-	h := createTestHandler(false)
+	h := createTestHandler(nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,
@@ -43,7 +44,7 @@ func TestCreateRecord(t *testing.T) {
 }
 
 func TestCreateRecordMissingZone(t *testing.T) {
-	h := createTestHandler(false)
+	h := createTestHandler(nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,
@@ -71,7 +72,7 @@ func TestCreateRecordMissingZone(t *testing.T) {
 }
 
 func TestCreateRecordZoneNotFQDN(t *testing.T) {
-	h := createTestHandler(false)
+	h := createTestHandler(nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,
@@ -99,7 +100,7 @@ func TestCreateRecordZoneNotFQDN(t *testing.T) {
 }
 
 func TestCreateRecordMissingContent(t *testing.T) {
-	h := createTestHandler(false)
+	h := createTestHandler(nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,
@@ -127,7 +128,7 @@ func TestCreateRecordMissingContent(t *testing.T) {
 }
 
 func TestCreateRecordMalformedContent(t *testing.T) {
-	h := createTestHandler(false)
+	h := createTestHandler(nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,
@@ -152,7 +153,7 @@ func TestCreateRecordMalformedContent(t *testing.T) {
 }
 
 func TestCreateRecordServerError(t *testing.T) {
-	h := createTestHandler(true)
+	h := createTestHandler(errors.New("mock error"))
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,
@@ -177,12 +178,12 @@ func TestCreateRecordServerError(t *testing.T) {
 	}
 }
 
-func createTestHandler(returnErrors bool) http.Handler {
+func createTestHandler(returnError error) http.Handler {
 	var handler *chi.Mux
 	_ = fx.New(
 		fx.Supply(
 			storage.MockStorageOptions{
-				ReturnErrors: returnErrors,
+				ReturnError: returnError,
 			},
 		),
 		fx.Provide(

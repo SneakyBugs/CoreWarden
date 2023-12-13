@@ -13,12 +13,14 @@ import (
 	"github.com/miekg/dns"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 )
 
 func TestResolve(t *testing.T) {
-	client, closer := createTestClient(t)
+	client, closer := createTestClient(t, nil)
 	defer closer(context.Background())
 
 	resp, err := client.Resolve(
@@ -39,13 +41,45 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Context)) {
+func TestResolveNotFound(t *testing.T) {
+	client, closer := createTestClient(t, RecordNotFoundError)
+	defer closer(context.Background())
+
+	_, err := client.Resolve(
+		context.Background(),
+		&resolver.Question{
+			Name:  "foo.example.com.",
+			Qtype: uint32(dns.TypeA),
+		},
+	)
+	if c := status.Convert(err).Code(); c != codes.NotFound {
+		t.Fatalf("expected code %d, got %d", codes.NotFound, c)
+	}
+}
+
+func TestResolveServerError(t *testing.T) {
+	client, closer := createTestClient(t, ServerError)
+	defer closer(context.Background())
+
+	_, err := client.Resolve(
+		context.Background(),
+		&resolver.Question{
+			Name:  "foo.example.com.",
+			Qtype: uint32(dns.TypeA),
+		},
+	)
+	if c := status.Convert(err).Code(); c != codes.Internal {
+		t.Fatalf("expected code %d, got %d", codes.Internal, c)
+	}
+}
+
+func createTestClient(t *testing.T, returnError error) (resolver.ResolverClient, func(context.Context)) {
 	lis := bufconn.Listen(10 * 1024 * 1024)
 	var store storage.Storage
 	app := fx.New(
 		fx.Supply(
 			storage.MockStorageOptions{
-				ReturnErrors: false,
+				ReturnError: returnError,
 			},
 		),
 		fx.Provide(
