@@ -7,6 +7,7 @@ import (
 	"git.houseofkummer.com/lior/home-dns/api/services/resolver"
 	"git.houseofkummer.com/lior/home-dns/api/services/rest"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
+	"git.houseofkummer.com/lior/home-dns/api/services/telemetry"
 	"go.uber.org/fx"
 )
 
@@ -35,6 +36,7 @@ func NewApp(options Options) *fx.App {
 		),
 		fx.Invoke(
 			logger.Register,
+			telemetry.Register,
 			resolver.Register,
 			records.Register,
 		),
