@@ -15,20 +15,6 @@ type RecordsStorage interface {
 	CreateRecord(ctx context.Context, p storage.RecordCreateParameters) (storage.Record, error)
 }
 
-type MockRecordStorage struct {
-}
-
-func (s MockRecordStorage) CreateRecord(ctx context.Context, p storage.RecordCreateParameters) (storage.Record, error) {
-	return storage.Record{
-		ID:        1,
-		Zone:      p.Zone,
-		RR:        p.RR,
-		Comment:   p.Comment,
-		CreatedAt: time.Now(),
-		UpdatedOn: time.Now(),
-	}, nil
-}
-
 func (s service) HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &RecordCreateRequest{}
@@ -36,7 +22,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 			rest.RenderError(w, r, err)
 			return
 		}
-		record, err := s.handler.CreateRecord(context.TODO(), storage.RecordCreateParameters{
+		record, err := s.handler.CreateRecord(r.Context(), storage.RecordCreateParameters{
 			Zone:    data.Zone,
 			RR:      data.RR.String(),
 			Comment: data.Comment,
@@ -78,7 +64,7 @@ func (rc *RecordCreateRequest) Bind(r *http.Request) error {
 			Message: "required",
 		})
 		// No need to parse content if content is empty.
-		return &rest.SpecificBadRequestError{
+		return &rest.BadRequestErrorResponse{
 			Fields: fieldErrors,
 		}
 	}
@@ -91,7 +77,7 @@ func (rc *RecordCreateRequest) Bind(r *http.Request) error {
 		})
 	}
 	if 0 < len(fieldErrors) {
-		return &rest.SpecificBadRequestError{
+		return &rest.BadRequestErrorResponse{
 			Fields: fieldErrors,
 		}
 	}
@@ -105,13 +91,4 @@ type RecordResponse struct {
 	Comment   string    `json:"comment,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedOn time.Time `json:"updatedOn"`
-}
-
-func RenderError(w http.ResponseWriter, r *http.Request, e error) {
-	response := struct {
-		Message string `json:"message"`
-	}{
-		Message: e.Error(),
-	}
-	render.JSON(w, r, response)
 }

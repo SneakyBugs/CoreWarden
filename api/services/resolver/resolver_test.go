@@ -43,6 +43,11 @@ func createTestClient(t *testing.T) (resolver.ResolverClient, func(context.Conte
 	lis := bufconn.Listen(10 * 1024 * 1024)
 	var store storage.Storage
 	app := fx.New(
+		fx.Supply(
+			storage.MockStorageOptions{
+				ReturnErrors: false,
+			},
+		),
 		fx.Provide(
 			grpcs.NewService,
 			logger.NewService,

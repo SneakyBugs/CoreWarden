@@ -30,7 +30,7 @@ type KeyError struct {
 	Message string `json:"message"`
 }
 
-type SpecificBadRequestError struct {
+type BadRequestErrorResponse struct {
 	Message string `json:"message"`
 	// JSON body key errors.
 	Fields []KeyError `json:"fields,omitempty"`
@@ -38,7 +38,7 @@ type SpecificBadRequestError struct {
 	Params []KeyError `json:"params,omitempty"`
 }
 
-func (e *SpecificBadRequestError) Error() string {
+func (e *BadRequestErrorResponse) Error() string {
 	return BadRequestError.Error()
 }
 
@@ -48,7 +48,7 @@ func RenderError(w http.ResponseWriter, r *http.Request, e error) {
 		render.JSON(w, r, er)
 		return
 	}
-	if bre, ok := e.(*SpecificBadRequestError); ok {
+	if bre, ok := e.(*BadRequestErrorResponse); ok {
 		render.Status(r, BadRequestError.Status)
 		if bre.Message == "" {
 			bre.Message = BadRequestError.Error()

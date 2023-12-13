@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -30,7 +31,26 @@ func (s *MockStorage) CreateRecord(ctx context.Context, p RecordCreateParameters
 	return record, nil
 }
 
-func NewMockService() Storage {
+var MockStorageError = errors.New("mock error")
+
+type MockErrorStorage struct{}
+
+func (s *MockErrorStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error) {
+	return DNSResponse{}, MockStorageError
+}
+
+func (s *MockErrorStorage) CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error) {
+	return Record{}, MockStorageError
+}
+
+type MockStorageOptions struct {
+	ReturnErrors bool
+}
+
+func NewMockService(o MockStorageOptions) Storage {
+	if o.ReturnErrors {
+		return &MockErrorStorage{}
+	}
 	return &MockStorage{
 		nextID:  1,
 		records: []Record{},
