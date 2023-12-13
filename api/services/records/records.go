@@ -2,10 +2,10 @@ package records
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
+	"git.houseofkummer.com/lior/home-dns/api/services/rest"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
 	"github.com/go-chi/render"
 	"github.com/miekg/dns"
@@ -33,8 +33,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &RecordCreateRequest{}
 		if err := render.Bind(r, data); err != nil {
-			RenderError(w, r, err)
-			render.Status(r, http.StatusBadRequest)
+			rest.RenderError(w, r, err)
 			return
 		}
 		record, err := s.handler.CreateRecord(context.TODO(), storage.RecordCreateParameters{
@@ -43,8 +42,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 			Comment: data.Comment,
 		})
 		if err != nil {
-			RenderError(w, r, internalServerError)
-			render.Status(r, http.StatusInternalServerError)
+			rest.RenderError(w, r, &rest.InternalServerError)
 			return
 		}
 		render.Status(r, http.StatusCreated)
@@ -67,15 +65,37 @@ type RecordCreateRequest struct {
 }
 
 func (rc *RecordCreateRequest) Bind(r *http.Request) error {
+	fieldErrors := []rest.KeyError{}
 	if rc.Zone == "" {
-		return errors.New("field `zone` is required")
+		fieldErrors = append(fieldErrors, rest.KeyError{
+			Key:     "zone",
+			Message: "required",
+		})
 	}
 	if rc.Content == "" {
-		return errors.New("field `content` is required")
+		fieldErrors = append(fieldErrors, rest.KeyError{
+			Key:     "content",
+			Message: "required",
+		})
+		// No need to parse content if content is empty.
+		return &rest.SpecificBadRequestError{
+			Fields: fieldErrors,
+		}
 	}
 	var err error
 	rc.RR, err = dns.NewRR(rc.Content)
-	return err
+	if err != nil {
+		fieldErrors = append(fieldErrors, rest.KeyError{
+			Key:     "content",
+			Message: err.Error(),
+		})
+	}
+	if 0 < len(fieldErrors) {
+		return &rest.SpecificBadRequestError{
+			Fields: fieldErrors,
+		}
+	}
+	return nil
 }
 
 type RecordResponse struct {
@@ -86,8 +106,6 @@ type RecordResponse struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedOn time.Time `json:"updatedOn"`
 }
-
-var internalServerError = errors.New("internal server error")
 
 func RenderError(w http.ResponseWriter, r *http.Request, e error) {
 	response := struct {
