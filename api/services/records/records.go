@@ -57,6 +57,11 @@ func (rc *RecordCreateRequest) Bind(r *http.Request) error {
 			Key:     "zone",
 			Message: "required",
 		})
+	} else if !dns.IsFqdn(rc.Zone) {
+		fieldErrors = append(fieldErrors, rest.KeyError{
+			Key:     "zone",
+			Message: "must end with '.'",
+		})
 	}
 	if rc.Content == "" {
 		fieldErrors = append(fieldErrors, rest.KeyError{
