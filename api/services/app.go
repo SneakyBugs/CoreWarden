@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"git.houseofkummer.com/lior/home-dns/api/services/grpc"
 	"git.houseofkummer.com/lior/home-dns/api/services/logger"
 	"git.houseofkummer.com/lior/home-dns/api/services/records"
@@ -12,19 +14,33 @@ import (
 )
 
 type Options struct {
+	GRPCPort         uint16
+	HTTPPort         uint16
+	PostgresDatabase string
+	PostgresHost     string
+	PostgresPassword string
+	PostgresPort     uint16
+	PostgresUser     string
 }
 
 func NewApp(options Options) *fx.App {
 	app := fx.New(
 		fx.Supply(
 			grpc.ListenerOptions{
-				Port: 6969,
+				Port: options.GRPCPort,
 			},
 			rest.Options{
-				Port: 6970,
+				Port: options.HTTPPort,
 			},
 			storage.Options{
-				ConnectionString: "postgres://development:development@localhost:5432/development?sslmode=disable",
+				ConnectionString: fmt.Sprintf(
+					"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+					options.PostgresUser,
+					options.PostgresPassword,
+					options.PostgresHost,
+					options.PostgresPort,
+					options.PostgresDatabase,
+				),
 			},
 		),
 		fx.Provide(
