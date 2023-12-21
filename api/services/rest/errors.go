@@ -25,6 +25,16 @@ var BadRequestError = ErrorResponse{
 	Status:  http.StatusBadRequest,
 }
 
+var UnauthorizedError = ErrorResponse{
+	Message: "unauthorized",
+	Status:  http.StatusUnauthorized,
+}
+
+var ForbiddenError = ErrorResponse{
+	Message: "forbidden",
+	Status:  http.StatusForbidden,
+}
+
 type KeyError struct {
 	Key     string `json:"key"`
 	Message string `json:"message"`
