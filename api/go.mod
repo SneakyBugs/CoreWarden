@@ -3,6 +3,7 @@ module git.houseofkummer.com/lior/home-dns/api
 go 1.21.3
 
 require (
+	github.com/casbin/casbin v1.9.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-chi/render v1.0.3
 	github.com/jackc/pgx/v5 v5.5.0
@@ -24,6 +25,7 @@ require (
 )
 
 require (
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
