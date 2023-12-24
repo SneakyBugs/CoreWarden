@@ -49,6 +49,29 @@ func (q *Queries) CreateRecord(ctx context.Context, arg CreateRecordParams) (Rec
 	return i, err
 }
 
+const deleteRecord = `-- name: DeleteRecord :one
+DELETE FROM Records
+WHERE id = $1
+RETURNING id, zone, content, name, is_wildcard, type, created_at, modified_on, comment
+`
+
+func (q *Queries) DeleteRecord(ctx context.Context, id int32) (Record, error) {
+	row := q.db.QueryRow(ctx, deleteRecord, id)
+	var i Record
+	err := row.Scan(
+		&i.ID,
+		&i.Zone,
+		&i.Content,
+		&i.Name,
+		&i.IsWildcard,
+		&i.Type,
+		&i.CreatedAt,
+		&i.ModifiedOn,
+		&i.Comment,
+	)
+	return i, err
+}
+
 const readRecord = `-- name: ReadRecord :one
 SELECT id, zone, content, name, is_wildcard, type, created_at, modified_on, comment FROM Records
 WHERE id = $1

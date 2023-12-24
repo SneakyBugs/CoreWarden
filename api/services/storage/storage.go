@@ -16,7 +16,7 @@ type Storage interface {
 	CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error)
 	ReadRecord(ctx context.Context, id int) (Record, error)
 	UpdateRecord(ctx context.Context, p RecordUpdateParameters) (Record, error)
-	// DeleteRecord(ctx context.Context, id int) (Record, error)
+	DeleteRecord(ctx context.Context, id int) (Record, error)
 	// ListRecords(ctx context.Context, zone string) ([]Record, error)
 }
 
@@ -181,6 +181,21 @@ func (s *PostgresStorage) UpdateRecord(ctx context.Context, p RecordUpdateParame
 		Type:       int32(rr.Header().Rrtype),
 		Comment:    p.Comment,
 	})
+	if err != nil {
+		return Record{}, RecordNotFoundError
+	}
+	return Record{
+		ID:         int(r.ID),
+		Zone:       r.Zone,
+		RR:         r.Content,
+		Comment:    r.Comment,
+		CreatedAt:  r.CreatedAt.Time,
+		ModifiedOn: r.ModifiedOn.Time,
+	}, nil
+}
+
+func (s *PostgresStorage) DeleteRecord(ctx context.Context, id int) (Record, error) {
+	r, err := s.queries.DeleteRecord(ctx, int32(id))
 	if err != nil {
 		return Record{}, RecordNotFoundError
 	}
