@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -24,6 +25,44 @@ func TestCreateRecord(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("failed to create record: %v\n", err)
+	}
+}
+
+func TestReadRecord(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	createResult, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      "foo 3600 IN A 127.0.0.1",
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	readResult, err := s.ReadRecord(ctx, createResult.ID)
+	if err != nil {
+		t.Fatalf("failed to read record: %v\n", err)
+	}
+	if readResult.Zone != "example.com." {
+		t.Fatalf("expected zone to be 'example.com.', got '%s'", readResult.Zone)
+	}
+	expectedRR := "foo 3600 IN A 127.0.0.1"
+	if readResult.RR != expectedRR {
+		t.Fatalf("expected RR to be '%s', got '%s'", expectedRR, readResult.RR)
+	}
+	if readResult.Comment != "test" {
+		t.Fatalf("expected comment to be 'test', got '%s'", readResult.Comment)
+	}
+}
+
+func TestReadRecordNotFound(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.ReadRecord(ctx, 1337)
+	if !errors.Is(err, RecordNotFoundError) {
+		t.Fatalf("expected record not found error, got %v\n", err)
 	}
 }
 

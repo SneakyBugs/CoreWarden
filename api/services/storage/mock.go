@@ -18,16 +18,25 @@ func (s *MockStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, 
 
 func (s *MockStorage) CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error) {
 	record := Record{
-		ID:        s.nextID,
-		Zone:      p.Zone,
-		RR:        p.RR,
-		Comment:   p.Comment,
-		CreatedAt: time.Now(),
-		UpdatedOn: time.Now(),
+		ID:         s.nextID,
+		Zone:       p.Zone,
+		RR:         p.RR,
+		Comment:    p.Comment,
+		CreatedAt:  time.Now(),
+		ModifiedOn: time.Now(),
 	}
 	s.records = append(s.records, record)
 	s.nextID++
 	return record, nil
+}
+
+func (s *MockStorage) ReadRecord(ctx context.Context, id int) (Record, error) {
+	for _, r := range s.records {
+		if r.ID == id {
+			return r, nil
+		}
+	}
+	return Record{}, RecordNotFoundError
 }
 
 type MockErrorStorage struct {
@@ -39,6 +48,10 @@ func (s *MockErrorStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSRespo
 }
 
 func (s *MockErrorStorage) CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error) {
+	return Record{}, s.Error
+}
+
+func (s *MockErrorStorage) ReadRecord(ctx context.Context, id int) (Record, error) {
 	return Record{}, s.Error
 }
 

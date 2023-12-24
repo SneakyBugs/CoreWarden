@@ -49,39 +49,26 @@ func (q *Queries) CreateRecord(ctx context.Context, arg CreateRecordParams) (Rec
 	return i, err
 }
 
-const listRecords = `-- name: ListRecords :many
+const readRecord = `-- name: ReadRecord :one
 SELECT id, zone, content, name, is_wildcard, type, created_at, modified_on, comment FROM Records
-WHERE zone = $1
+WHERE id = $1
 `
 
-func (q *Queries) ListRecords(ctx context.Context, zone string) ([]Record, error) {
-	rows, err := q.db.Query(ctx, listRecords, zone)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Record
-	for rows.Next() {
-		var i Record
-		if err := rows.Scan(
-			&i.ID,
-			&i.Zone,
-			&i.Content,
-			&i.Name,
-			&i.IsWildcard,
-			&i.Type,
-			&i.CreatedAt,
-			&i.ModifiedOn,
-			&i.Comment,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) ReadRecord(ctx context.Context, id int32) (Record, error) {
+	row := q.db.QueryRow(ctx, readRecord, id)
+	var i Record
+	err := row.Scan(
+		&i.ID,
+		&i.Zone,
+		&i.Content,
+		&i.Name,
+		&i.IsWildcard,
+		&i.Type,
+		&i.CreatedAt,
+		&i.ModifiedOn,
+		&i.Comment,
+	)
+	return i, err
 }
 
 const resolveRecord = `-- name: ResolveRecord :many

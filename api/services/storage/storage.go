@@ -13,8 +13,10 @@ import (
 type Storage interface {
 	Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error)
 	CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error)
-	// ReadRecord(ctx context.Context, id int) (Record, error)
+	ReadRecord(ctx context.Context, id int) (Record, error)
 }
+
+var RecordNotFoundError = errors.New("record not found")
 
 type PostgresStorage struct {
 	queries *queries.Queries
@@ -126,10 +128,26 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 		return Record{}, fmt.Errorf("faild to create record: %v", err)
 	}
 	return Record{
-		ID:      int(r.ID),
-		Zone:    r.Zone,
-		RR:      r.Content,
-		Comment: r.Comment,
+		ID:         int(r.ID),
+		Zone:       r.Zone,
+		RR:         r.Content,
+		Comment:    r.Comment,
+		CreatedAt:  r.CreatedAt.Time,
+		ModifiedOn: r.ModifiedOn.Time,
+	}, nil
+}
+func (s *PostgresStorage) ReadRecord(ctx context.Context, id int) (Record, error) {
+	r, err := s.queries.ReadRecord(ctx, int32(id))
+	if err != nil {
+		return Record{}, RecordNotFoundError
+	}
+	return Record{
+		ID:         int(r.ID),
+		Zone:       r.Zone,
+		RR:         r.Content,
+		Comment:    r.Comment,
+		CreatedAt:  r.CreatedAt.Time,
+		ModifiedOn: r.ModifiedOn.Time,
 	}, nil
 }
 
@@ -140,10 +158,10 @@ type RecordCreateParameters struct {
 }
 
 type Record struct {
-	ID        int
-	Zone      string
-	RR        string
-	Comment   string
-	CreatedAt time.Time
-	UpdatedOn time.Time
+	ID         int
+	Zone       string
+	RR         string
+	Comment    string
+	CreatedAt  time.Time
+	ModifiedOn time.Time
 }

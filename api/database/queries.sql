@@ -1,12 +1,12 @@
--- name: ListRecords :many
-SELECT * FROM Records
-WHERE zone = $1;
-
 -- name: CreateRecord :one
 INSERT INTO Records
 (zone, content, name, is_wildcard, type, comment)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
+
+-- name: ReadRecord :one
+SELECT * FROM Records
+WHERE id = $1;
 
 -- name: ResolveRecord :many
 SELECT * FROM Records

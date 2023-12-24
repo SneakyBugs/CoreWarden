@@ -47,7 +47,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 			Content:   record.RR,
 			Comment:   record.Comment,
 			CreatedAt: record.CreatedAt,
-			UpdatedOn: record.UpdatedOn,
+			UpdatedOn: record.ModifiedOn,
 		})
 	}
 }
