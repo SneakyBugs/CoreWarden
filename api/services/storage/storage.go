@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +15,9 @@ type Storage interface {
 	Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error)
 	CreateRecord(ctx context.Context, p RecordCreateParameters) (Record, error)
 	ReadRecord(ctx context.Context, id int) (Record, error)
+	UpdateRecord(ctx context.Context, p RecordUpdateParameters) (Record, error)
+	// DeleteRecord(ctx context.Context, id int) (Record, error)
+	// ListRecords(ctx context.Context, zone string) ([]Record, error)
 }
 
 var RecordNotFoundError = errors.New("record not found")
@@ -151,7 +155,53 @@ func (s *PostgresStorage) ReadRecord(ctx context.Context, id int) (Record, error
 	}, nil
 }
 
+func (s *PostgresStorage) UpdateRecord(ctx context.Context, p RecordUpdateParameters) (Record, error) {
+	rr, err := dns.NewRR(p.RR)
+	if err != nil {
+		return Record{}, fmt.Errorf("failed to parse RR: %v", err)
+	}
+
+	zoneFqdn := dns.Fqdn(p.Zone)
+	rrName := dns.Fqdn(rr.Header().Name)
+	fullName := rrName + zoneFqdn
+	isWildcard := false
+	if rrName == "." {
+		fullName = zoneFqdn
+	} else if strings.HasPrefix(fullName, "*.") {
+		fullName = fullName[2:]
+		isWildcard = true
+	}
+
+	r, err := s.queries.UpdateRecord(ctx, queries.UpdateRecordParams{
+		ID:         int32(p.ID),
+		Zone:       zoneFqdn,
+		Content:    p.RR,
+		Name:       fullName,
+		IsWildcard: isWildcard,
+		Type:       int32(rr.Header().Rrtype),
+		Comment:    p.Comment,
+	})
+	if err != nil {
+		return Record{}, RecordNotFoundError
+	}
+	return Record{
+		ID:         int(r.ID),
+		Zone:       r.Zone,
+		RR:         r.Content,
+		Comment:    r.Comment,
+		CreatedAt:  r.CreatedAt.Time,
+		ModifiedOn: r.ModifiedOn.Time,
+	}, nil
+}
+
 type RecordCreateParameters struct {
+	Zone    string
+	RR      string
+	Comment string
+}
+
+type RecordUpdateParameters struct {
+	ID      int
 	Zone    string
 	RR      string
 	Comment string

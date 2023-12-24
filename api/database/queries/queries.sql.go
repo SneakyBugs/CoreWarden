@@ -150,3 +150,45 @@ func (q *Queries) ResolveWildcardRecord(ctx context.Context, arg ResolveWildcard
 	}
 	return items, nil
 }
+
+const updateRecord = `-- name: UpdateRecord :one
+UPDATE Records
+SET zone = $1, content = $2, name = $3, is_wildcard = $4, type = $5, comment = $6, modified_on = NOW()
+where id = $7
+RETURNING id, zone, content, name, is_wildcard, type, created_at, modified_on, comment
+`
+
+type UpdateRecordParams struct {
+	Zone       string
+	Content    string
+	Name       string
+	IsWildcard bool
+	Type       int32
+	Comment    string
+	ID         int32
+}
+
+func (q *Queries) UpdateRecord(ctx context.Context, arg UpdateRecordParams) (Record, error) {
+	row := q.db.QueryRow(ctx, updateRecord,
+		arg.Zone,
+		arg.Content,
+		arg.Name,
+		arg.IsWildcard,
+		arg.Type,
+		arg.Comment,
+		arg.ID,
+	)
+	var i Record
+	err := row.Scan(
+		&i.ID,
+		&i.Zone,
+		&i.Content,
+		&i.Name,
+		&i.IsWildcard,
+		&i.Type,
+		&i.CreatedAt,
+		&i.ModifiedOn,
+		&i.Comment,
+	)
+	return i, err
+}

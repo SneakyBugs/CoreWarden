@@ -66,6 +66,54 @@ func TestReadRecordNotFound(t *testing.T) {
 	}
 }
 
+func TestUpdateRecord(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	createResult, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      "foo 3600 IN A 127.0.0.1",
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	updateResult, err := s.UpdateRecord(ctx, RecordUpdateParameters{
+		ID:      createResult.ID,
+		Zone:    createResult.Zone,
+		RR:      createResult.RR,
+		Comment: "changed",
+	})
+	if err != nil {
+		t.Fatalf("failed to update record: %v\n", err)
+	}
+	if updateResult.Comment != "changed" {
+		t.Fatalf("expected comment to be 'changed', got '%s'\n", updateResult.Comment)
+	}
+	readResult, err := s.ReadRecord(ctx, createResult.ID)
+	if err != nil {
+		t.Fatalf("failed to read record: %v\n", err)
+	}
+	if readResult.Comment != "changed" {
+		t.Fatalf("expected comment to be 'test', got '%s'", readResult.Comment)
+	}
+}
+
+func TestUpdateRecordNotFound(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.UpdateRecord(ctx, RecordUpdateParameters{
+		ID:      1337,
+		Zone:    "example.com.",
+		RR:      "foo 3600 IN A 127.0.0.1",
+		Comment: "test",
+	})
+	if !errors.Is(err, RecordNotFoundError) {
+		t.Fatalf("expected record not found error, got %v\n", err)
+	}
+}
+
 func TestResolveRecord(t *testing.T) {
 	s, closer := createTestStorage()
 	ctx := context.Background()
