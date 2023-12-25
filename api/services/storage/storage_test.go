@@ -156,6 +156,57 @@ func TestDeleteRecordNotFound(t *testing.T) {
 	}
 }
 
+func TestListRecords(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      "foo 3600 IN A 127.0.0.1",
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	_, err = s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      "bar 3600 IN A 127.0.0.1",
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	_, err = s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "foo.com.",
+		RR:      "@ 3600 IN A 127.0.0.1",
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	records, err := s.ListRecords(ctx, "example.com.")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected records length to be 2, got %d", len(records))
+	}
+}
+
+func TestListRecordsEmpty(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	records, err := s.ListRecords(ctx, "example.com.")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(records) != 0 {
+		t.Fatalf("expected records length to be 0, got %d", len(records))
+	}
+
+}
+
 func TestResolveRecord(t *testing.T) {
 	s, closer := createTestStorage()
 	ctx := context.Background()

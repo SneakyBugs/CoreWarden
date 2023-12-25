@@ -62,6 +62,16 @@ func (s *MockStorage) DeleteRecord(ctx context.Context, id int) (Record, error) 
 	return Record{}, RecordNotFoundError
 }
 
+func (s *MockStorage) ListRecords(ctx context.Context, zone string) ([]Record, error) {
+	records := []Record{}
+	for _, r := range s.records {
+		if r.Zone == zone {
+			records = append(records, r)
+		}
+	}
+	return records, nil
+}
+
 type MockErrorStorage struct {
 	Error error
 }
@@ -84,6 +94,9 @@ func (s *MockErrorStorage) UpdateRecord(ctx context.Context, p RecordUpdateParam
 
 func (s *MockErrorStorage) DeleteRecord(ctx context.Context, id int) (Record, error) {
 	return Record{}, s.Error
+}
+func (s *MockErrorStorage) ListRecords(ctx context.Context, zone string) ([]Record, error) {
+	return []Record{}, s.Error
 }
 
 type MockStorageOptions struct {

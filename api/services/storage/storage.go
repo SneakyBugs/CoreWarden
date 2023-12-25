@@ -17,10 +17,11 @@ type Storage interface {
 	ReadRecord(ctx context.Context, id int) (Record, error)
 	UpdateRecord(ctx context.Context, p RecordUpdateParameters) (Record, error)
 	DeleteRecord(ctx context.Context, id int) (Record, error)
-	// ListRecords(ctx context.Context, zone string) ([]Record, error)
+	ListRecords(ctx context.Context, zone string) ([]Record, error)
 }
 
 var RecordNotFoundError = errors.New("record not found")
+var ServerError = errors.New("server error")
 
 type PostgresStorage struct {
 	queries *queries.Queries
@@ -207,6 +208,25 @@ func (s *PostgresStorage) DeleteRecord(ctx context.Context, id int) (Record, err
 		CreatedAt:  r.CreatedAt.Time,
 		ModifiedOn: r.ModifiedOn.Time,
 	}, nil
+}
+
+func (s *PostgresStorage) ListRecords(ctx context.Context, zone string) ([]Record, error) {
+	r, err := s.queries.ListRecords(ctx, zone)
+	if err != nil {
+		return []Record{}, ServerError
+	}
+	records := make([]Record, len(r))
+	for i, record := range r {
+		records[i] = Record{
+			ID:         int(record.ID),
+			Zone:       record.Zone,
+			RR:         record.Content,
+			Comment:    record.Comment,
+			CreatedAt:  record.CreatedAt.Time,
+			ModifiedOn: record.ModifiedOn.Time,
+		}
+	}
+	return records, nil
 }
 
 type RecordCreateParameters struct {

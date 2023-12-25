@@ -72,6 +72,41 @@ func (q *Queries) DeleteRecord(ctx context.Context, id int32) (Record, error) {
 	return i, err
 }
 
+const listRecords = `-- name: ListRecords :many
+SELECT id, zone, content, name, is_wildcard, type, created_at, modified_on, comment FROM Records
+WHERE zone = $1
+`
+
+func (q *Queries) ListRecords(ctx context.Context, zone string) ([]Record, error) {
+	rows, err := q.db.Query(ctx, listRecords, zone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Record
+	for rows.Next() {
+		var i Record
+		if err := rows.Scan(
+			&i.ID,
+			&i.Zone,
+			&i.Content,
+			&i.Name,
+			&i.IsWildcard,
+			&i.Type,
+			&i.CreatedAt,
+			&i.ModifiedOn,
+			&i.Comment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const readRecord = `-- name: ReadRecord :one
 SELECT id, zone, content, name, is_wildcard, type, created_at, modified_on, comment FROM Records
 WHERE id = $1
