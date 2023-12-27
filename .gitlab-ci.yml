@@ -14,7 +14,7 @@ lint:api:
   image: golangci/golangci-lint:v1.55.2
   script:
     - cd api
-    - golangci-lint run ./...
+    - golangci-lint run --timeout=5m ./...
 
 gen:sqlc:
   stage: validate
