@@ -14,6 +14,10 @@ import (
 
 type RecordsStorage interface {
 	CreateRecord(ctx context.Context, p storage.RecordCreateParameters) (storage.Record, error)
+	ReadRecord(ctx context.Context, id int) (storage.Record, error)
+	UpdateRecord(ctx context.Context, p storage.RecordUpdateParameters) (storage.Record, error)
+	DeleteRecord(ctx context.Context, id int) (storage.Record, error)
+	ListRecords(ctx context.Context, zone string) ([]storage.Record, error)
 }
 
 func (s service) HandleCreate() http.HandlerFunc {

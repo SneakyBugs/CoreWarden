@@ -41,6 +41,7 @@ func CreateRootCommand() Command {
 				PostgresPassword: cfg.GetString("postgres-password"),
 				PostgresPort:     cfg.GetUint16("postgres-port"),
 				PostgresUser:     cfg.GetString("postgres-user"),
+				PolicyFile:       cfg.GetString("policy-file"),
 			})
 			app.Run()
 		},

@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 
+	"git.houseofkummer.com/lior/home-dns/api/services/enforcer"
 	"git.houseofkummer.com/lior/home-dns/api/services/grpc"
 	"git.houseofkummer.com/lior/home-dns/api/services/logger"
 	"git.houseofkummer.com/lior/home-dns/api/services/records"
@@ -21,6 +22,7 @@ type Options struct {
 	PostgresPassword string
 	PostgresPort     uint16
 	PostgresUser     string
+	PolicyFile       string
 }
 
 func NewApp(options Options) *fx.App {
@@ -42,6 +44,9 @@ func NewApp(options Options) *fx.App {
 					options.PostgresDatabase,
 				),
 			},
+			enforcer.CasbinEnforcerOptions{
+				PolicyFile: options.PolicyFile,
+			},
 		),
 		fx.Provide(
 			grpc.NewListener,
@@ -49,6 +54,7 @@ func NewApp(options Options) *fx.App {
 			rest.NewService,
 			logger.NewService,
 			storage.NewService,
+			enforcer.NewCasbinEnforcer,
 		),
 		fx.Invoke(
 			logger.Register,

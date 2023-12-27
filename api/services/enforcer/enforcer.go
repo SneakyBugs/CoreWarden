@@ -1,10 +1,13 @@
 package enforcer
 
 import (
+	_ "embed"
 	"errors"
 	"net/http"
 
-	"github.com/casbin/casbin"
+	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
+	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
 )
 
 type Action string
@@ -29,17 +32,25 @@ type CasbinEnforcer struct {
 	enforcer *casbin.Enforcer
 }
 
-func (a *CasbinEnforcer) Enforce(sub string, obj string, zone string, act Action) (bool, error) {
-	return a.enforcer.Enforce(sub, obj, zone, string(act)), nil
+func (a *CasbinEnforcer) Enforce(sub string, obj string, zone string, act Action) (ok bool, err error) {
+	ok, err = a.enforcer.Enforce(sub, obj, zone, string(act))
+	return
 }
 
 type CasbinEnforcerOptions struct {
 	PolicyFile string
 }
 
+//go:embed model.conf
+var modelConf string
+
 func NewCasbinEnforcer(o CasbinEnforcerOptions) Enforcer {
-	// TODO embed model file
-	enforcer, err := casbin.NewEnforcerSafe("model.conf", o.PolicyFile)
+	m, err := model.NewModelFromString(modelConf)
+	if err != nil {
+		panic(err)
+	}
+	a := fileadapter.NewAdapter(o.PolicyFile)
+	enforcer, err := casbin.NewEnforcer(m, a)
 	if err != nil {
 		panic(err)
 	}
