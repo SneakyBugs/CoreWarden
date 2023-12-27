@@ -478,6 +478,116 @@ func TestUpdateRecordForbiddenNewZone(t *testing.T) {
 	}
 }
 
+func TestDeleteRecord(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodDelete,
+		"/v1/records/1",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records/1",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestDeleteRecordNotFound(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodDelete,
+		"/v1/records/1",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestDeleteRecordUnauthorized(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodDelete,
+		"/v1/records/1",
+		nil,
+	)
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestDeleteRecordForbidden(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodDelete,
+		"/v1/records/1",
+		nil,
+	)
+	auth.MockLogin(r, "bob")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+}
+
 func createTestHandler(returnError error) http.Handler {
 	var handler *chi.Mux
 	_ = fx.New(

@@ -22,4 +22,5 @@ func Register(r *chi.Mux, e enforcer.Enforcer, s storage.Storage, l *zap.Logger)
 	r.Post("/v1/records", sr.HandleCreate())
 	r.Get("/v1/records/{id}", sr.HandleRead())
 	r.Put("/v1/records/{id}", sr.HandleUpdate())
+	r.Delete("/v1/records/{id}", sr.HandleDelete())
 }

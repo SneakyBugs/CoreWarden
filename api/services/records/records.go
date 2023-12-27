@@ -243,6 +243,63 @@ func (s service) HandleUpdate() http.HandlerFunc {
 	}
 }
 
+func (s service) HandleDelete() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		recordID := chi.URLParam(r, "id")
+		if recordID == "" {
+			s.logger.Error("empty id URL parameter")
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+		parsedID, err := strconv.Atoi(recordID)
+		if err != nil {
+			s.logger.Error("failed parsing ID to int", zap.Error(err))
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+
+		// Read record to enforce authorization.
+		existingRecord, err := s.handler.ReadRecord(r.Context(), parsedID)
+		if err != nil {
+			s.logger.Error("failed to read record", zap.Error(err))
+			if errors.Is(err, storage.RecordNotFoundError) {
+				rest.RenderError(w, r, &rest.NotFoundError)
+				return
+			}
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		ok, err := s.enforcer.IsAuthorized(r, existingRecord.Zone)
+		if err != nil {
+			s.logger.Error("failed to enforce action", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		if !ok {
+			s.logger.Error("unauthorized", zap.Error(err))
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+
+		rec, err := s.handler.DeleteRecord(r.Context(), parsedID)
+		if err != nil {
+			s.logger.Error("failed deleting record", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, RecordResponse{
+			ID:        rec.ID,
+			Zone:      rec.Zone,
+			Content:   rec.RR,
+			Comment:   rec.Comment,
+			CreatedAt: rec.CreatedAt,
+			UpdatedOn: rec.ModifiedOn,
+		})
+	}
+
+}
+
 type RecordResponse struct {
 	ID        int       `json:"id"`
 	Zone      string    `json:"zone"`
