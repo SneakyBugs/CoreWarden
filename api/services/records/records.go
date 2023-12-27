@@ -300,6 +300,68 @@ func (s service) HandleDelete() http.HandlerFunc {
 
 }
 
+func (s service) HandleList() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		zone := r.URL.Query().Get("zone")
+		if zone == "" {
+			s.logger.Error("missing zone GET parameter")
+			rest.RenderError(w, r, &rest.BadRequestErrorResponse{
+				Params: []rest.KeyError{
+					{
+						Key:     "zone",
+						Message: "required",
+					},
+				},
+			})
+			return
+		}
+		if !dns.IsFqdn(zone) {
+			s.logger.Error("zone is not FQDN")
+			rest.RenderError(w, r, &rest.BadRequestErrorResponse{
+				Params: []rest.KeyError{
+					{
+						Key:     "zone",
+						Message: "must be FQDN",
+					},
+				},
+			})
+			return
+		}
+
+		ok, err := s.enforcer.IsAuthorized(r, zone)
+		if err != nil {
+			s.logger.Error("failed to enforce action", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		if !ok {
+			s.logger.Error("unauthorized", zap.Error(err))
+			rest.RenderError(w, r, &rest.ForbiddenError)
+			return
+		}
+
+		recs, err := s.handler.ListRecords(r.Context(), zone)
+		if err != nil {
+			s.logger.Error("failed to list records", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		records := make([]RecordResponse, len(recs))
+		for i, rec := range recs {
+			records[i] = RecordResponse{
+				ID:        rec.ID,
+				Zone:      rec.Zone,
+				Content:   rec.RR,
+				Comment:   rec.Comment,
+				CreatedAt: rec.CreatedAt,
+				UpdatedOn: rec.ModifiedOn,
+			}
+		}
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, records)
+	}
+}
+
 type RecordResponse struct {
 	ID        int       `json:"id"`
 	Zone      string    `json:"zone"`

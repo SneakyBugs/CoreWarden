@@ -19,6 +19,7 @@ func Register(r *chi.Mux, e enforcer.Enforcer, s storage.Storage, l *zap.Logger)
 		handler:  s,
 		logger:   l,
 	}
+	r.Get("/v1/records", sr.HandleList())
 	r.Post("/v1/records", sr.HandleCreate())
 	r.Get("/v1/records/{id}", sr.HandleRead())
 	r.Put("/v1/records/{id}", sr.HandleUpdate())

@@ -126,7 +126,7 @@ func TestCreateRecordMissingContent(t *testing.T) {
 		t.Fatalf("Expected fields to of length 1, got %d", len(response.Fields))
 	}
 	if response.Fields[0].Key != "content" {
-		t.Errorf("Expected fields[0].key to be 'zone', got '%s'", response.Fields[0].Key)
+		t.Errorf("Expected fields[0].key to be 'content', got '%s'", response.Fields[0].Key)
 	}
 	if response.Fields[0].Message != "required" {
 		t.Errorf("Expected fields[0].message to be 'required', got '%s'", response.Fields[0].Message)
@@ -155,7 +155,7 @@ func TestCreateRecordMalformedContent(t *testing.T) {
 		t.Fatalf("Expected fields to of length 1, got %d", len(response.Fields))
 	}
 	if response.Fields[0].Key != "content" {
-		t.Errorf("Expected fields[0].key to be 'zone', got '%s'", response.Fields[0].Key)
+		t.Errorf("Expected fields[0].key to be 'content', got '%s'", response.Fields[0].Key)
 	}
 }
 
@@ -556,7 +556,7 @@ func TestDeleteRecordUnauthorized(t *testing.T) {
 	)
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusUnauthorized {
-		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
 	}
 }
 
@@ -584,7 +584,148 @@ func TestDeleteRecordForbidden(t *testing.T) {
 	auth.MockLogin(r, "bob")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestListRecords(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records?zone=example.com.",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+
+	var response []RecordResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(response) != 1 {
+		t.Fatalf("Expected length to be 1, got %d", len(response))
+	}
+}
+
+func TestListRecordsEmpty(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records?zone=example.com.",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+
+	body := strings.TrimSpace(w.Body.String())
+	if body != "[]" {
+		t.Fatalf("Expected body to be '[]', got '%s'", body)
+	}
+}
+
+func TestListRecordsNoZone(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
+	}
+	var response rest.BadRequestErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(response.Params) != 1 {
+		t.Fatalf("Expected fields to of length 1, got %d", len(response.Fields))
+	}
+	if response.Params[0].Key != "zone" {
+		t.Errorf("Expected fields[0].key to be 'zone', got '%s'", response.Fields[0].Key)
+	}
+	if response.Params[0].Message != "required" {
+		t.Errorf("Expected fields[0].message to be 'required', got '%s'", response.Fields[0].Message)
+	}
+}
+
+func TestListRecordsZoneNotFQDN(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records?zone=helloworld",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
+	}
+	var response rest.BadRequestErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(response.Params) != 1 {
+		t.Fatalf("Expected fields to of length 1, got %d", len(response.Fields))
+	}
+	if response.Params[0].Key != "zone" {
+		t.Errorf("Expected fields[0].key to be 'zone', got '%s'", response.Fields[0].Key)
+	}
+	if response.Params[0].Message != "must be FQDN" {
+		t.Errorf("Expected fields[0].message to be 'must be FQDN', got '%s'", response.Fields[0].Message)
+	}
+}
+
+func TestListRecordsUnauthorized(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records?zone=example.com.",
+		nil,
+	)
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestListRecordsForbidden(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records?zone=example.com.",
+		nil,
+	)
+	auth.MockLogin(r, "bob")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d", w.Result().StatusCode)
 	}
 }
 
