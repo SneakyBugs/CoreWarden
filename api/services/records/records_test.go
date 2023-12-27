@@ -217,6 +217,117 @@ func TestCreateRecordForbidden(t *testing.T) {
 	}
 }
 
+func TestReadRecord(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records/1",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+	var response RecordResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if response.Zone != "example.com." {
+		t.Errorf("Expected zone to be 'example.com.', got '%s'", response.Zone)
+	}
+	if response.Content != ".\t3600\tIN\tA\t127.0.0.1" {
+		t.Errorf("Expected content to be '@\\tA\\t127.0.0.1', got '%s'", response.Content)
+	}
+	if response.Comment != "test" {
+		t.Errorf("Expected comment to be 'test', got '%s'", response.Comment)
+	}
+}
+
+func TestReadRecordNotFound(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestReadRecordUnauthorized(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestReadRecordForbidden(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "bob")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
 func createTestHandler(returnError error) http.Handler {
 	var handler *chi.Mux
 	_ = fx.New(

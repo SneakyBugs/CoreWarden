@@ -2,11 +2,14 @@ package records
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"git.houseofkummer.com/lior/home-dns/api/services/rest"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
@@ -35,6 +38,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 			return
 		}
 		if !ok {
+			s.logger.Error("unauthorized", zap.Error(err))
 			rest.RenderError(w, r, &rest.ForbiddenError)
 			return
 		}
@@ -110,6 +114,54 @@ func (rc *RecordCreateRequest) Bind(r *http.Request) error {
 		}
 	}
 	return nil
+}
+
+func (s service) HandleRead() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		recordID := chi.URLParam(r, "id")
+		if recordID == "" {
+			s.logger.Error("empty id URL parameter")
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+		parsedID, err := strconv.Atoi(recordID)
+		if err != nil {
+			s.logger.Error("failed parsing ID to int", zap.Error(err))
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+		rec, err := s.handler.ReadRecord(r.Context(), parsedID)
+		if err != nil {
+			s.logger.Error("failed to read record", zap.Error(err))
+			if errors.Is(err, storage.RecordNotFoundError) {
+				rest.RenderError(w, r, &rest.NotFoundError)
+				return
+			}
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		ok, err := s.enforcer.IsAuthorized(r, rec.Zone)
+		if err != nil {
+			s.logger.Error("failed to enforce action", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		if !ok {
+			s.logger.Error("unauthorized", zap.Error(err))
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, RecordResponse{
+			ID:        rec.ID,
+			Zone:      rec.Zone,
+			Content:   rec.RR,
+			Comment:   rec.Comment,
+			CreatedAt: rec.CreatedAt,
+			UpdatedOn: rec.ModifiedOn,
+		})
+
+	}
 }
 
 type RecordResponse struct {

@@ -25,6 +25,11 @@ var BadRequestError = ErrorResponse{
 	Status:  http.StatusBadRequest,
 }
 
+var NotFoundError = ErrorResponse{
+	Message: "not found",
+	Status:  http.StatusNotFound,
+}
+
 var UnauthorizedError = ErrorResponse{
 	Message: "unauthorized",
 	Status:  http.StatusUnauthorized,
