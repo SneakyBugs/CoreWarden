@@ -60,6 +60,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
       security:
         - ServiceAccount: ["p, <sub>, records, <zone>, read"]
     post:
@@ -104,6 +110,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
       security:
         - ServiceAccount: ["p, <sub>, records, <zone>, read"]
   /records/{id}:
@@ -140,6 +152,12 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Not found or forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
           content:
             application/json:
               schema:
@@ -195,6 +213,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
       security:
         - ServiceAccount: ["p, <sub>, records, <zone>, edit"]
     delete:
@@ -230,6 +254,12 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Not found or forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
           content:
             application/json:
               schema:
