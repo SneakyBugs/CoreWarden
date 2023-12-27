@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -14,6 +15,8 @@ import (
 	"git.houseofkummer.com/lior/home-dns/api/services/rest"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
 	"github.com/go-chi/chi/v5"
+	"github.com/pb33f/libopenapi"
+	validator "github.com/pb33f/libopenapi-validator"
 	"go.uber.org/fx"
 )
 
@@ -28,6 +31,7 @@ func TestCreateRecord(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -57,6 +61,7 @@ func TestCreateRecordMissingZone(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
 	}
@@ -86,6 +91,7 @@ func TestCreateRecordZoneNotFQDN(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
 	}
@@ -115,6 +121,7 @@ func TestCreateRecordMissingContent(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
 	}
@@ -144,6 +151,7 @@ func TestCreateRecordMalformedContent(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
 	}
@@ -170,6 +178,7 @@ func TestCreateRecordServerError(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusInternalServerError {
 		t.Errorf("Expected status 500, got %d", w.Result().StatusCode)
 	}
@@ -196,6 +205,7 @@ func TestCreateRecordUnauthorized(t *testing.T) {
 	)
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
 	}
@@ -212,6 +222,7 @@ func TestCreateRecordForbidden(t *testing.T) {
 	auth.MockLogin(r, "bob")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusForbidden {
 		t.Errorf("Expected status 403, got %d", w.Result().StatusCode)
 	}
@@ -228,6 +239,7 @@ func TestReadRecord(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -240,6 +252,7 @@ func TestReadRecord(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
 	}
@@ -268,6 +281,7 @@ func TestReadRecordNotFound(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
@@ -284,6 +298,7 @@ func TestReadRecordUnauthorized(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -295,6 +310,7 @@ func TestReadRecordUnauthorized(t *testing.T) {
 		nil,
 	)
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
 	}
@@ -311,6 +327,7 @@ func TestReadRecordForbidden(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -323,6 +340,7 @@ func TestReadRecordForbidden(t *testing.T) {
 	)
 	auth.MockLogin(r, "bob")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
@@ -339,6 +357,7 @@ func TestUpdateRecord(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -352,6 +371,7 @@ func TestUpdateRecord(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
 	}
@@ -364,6 +384,7 @@ func TestUpdateRecord(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
 	}
@@ -387,6 +408,7 @@ func TestUpdateRecordNotFound(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
@@ -403,6 +425,7 @@ func TestUpdateRecordUnauthorized(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -415,6 +438,7 @@ func TestUpdateRecordUnauthorized(t *testing.T) {
 	)
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
 	}
@@ -431,6 +455,7 @@ func TestUpdateRecordForbiddenOldZone(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -444,6 +469,7 @@ func TestUpdateRecordForbiddenOldZone(t *testing.T) {
 	auth.MockLogin(r, "bob")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
@@ -460,6 +486,7 @@ func TestUpdateRecordForbiddenNewZone(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -473,6 +500,7 @@ func TestUpdateRecordForbiddenNewZone(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusForbidden {
 		t.Errorf("Expected status 403, got %d", w.Result().StatusCode)
 	}
@@ -489,6 +517,7 @@ func TestDeleteRecord(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -501,6 +530,7 @@ func TestDeleteRecord(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
 	}
@@ -513,9 +543,11 @@ func TestDeleteRecord(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
+	validateResponseBody(t, r, w.Result())
 }
 
 func TestDeleteRecordNotFound(t *testing.T) {
@@ -528,6 +560,7 @@ func TestDeleteRecordNotFound(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
@@ -544,6 +577,7 @@ func TestDeleteRecordUnauthorized(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -555,6 +589,7 @@ func TestDeleteRecordUnauthorized(t *testing.T) {
 		nil,
 	)
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
 	}
@@ -571,6 +606,7 @@ func TestDeleteRecordForbidden(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -583,6 +619,7 @@ func TestDeleteRecordForbidden(t *testing.T) {
 	)
 	auth.MockLogin(r, "bob")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
 	}
@@ -599,6 +636,7 @@ func TestListRecords(t *testing.T) {
 	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
 	}
@@ -611,6 +649,7 @@ func TestListRecords(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
 	}
@@ -622,6 +661,7 @@ func TestListRecords(t *testing.T) {
 	if len(response) != 1 {
 		t.Fatalf("Expected length to be 1, got %d", len(response))
 	}
+	validateResponseBody(t, r, w.Result())
 }
 
 func TestListRecordsEmpty(t *testing.T) {
@@ -634,6 +674,7 @@ func TestListRecordsEmpty(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
 	}
@@ -654,6 +695,7 @@ func TestListRecordsNoZone(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
 	}
@@ -682,6 +724,7 @@ func TestListRecordsZoneNotFQDN(t *testing.T) {
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
 	}
@@ -709,6 +752,7 @@ func TestListRecordsUnauthorized(t *testing.T) {
 		nil,
 	)
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
 	}
@@ -724,6 +768,7 @@ func TestListRecordsForbidden(t *testing.T) {
 	)
 	auth.MockLogin(r, "bob")
 	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
 	if w.Result().StatusCode != http.StatusForbidden {
 		t.Errorf("Expected status 403, got %d", w.Result().StatusCode)
 	}
@@ -756,4 +801,28 @@ func createTestHandler(returnError error) http.Handler {
 		),
 	)
 	return handler
+}
+
+var docValidator validator.Validator
+
+func validateResponseBody(t *testing.T, r *http.Request, w *http.Response) {
+	if docValidator == nil {
+		apiSpec, err := os.ReadFile("../../openapi.yaml")
+		if err != nil {
+			t.Fatalf("Failed reading OpenAPI spec: %v\n", err)
+		}
+		document, err := libopenapi.NewDocument(apiSpec)
+		if err != nil {
+			t.Fatalf("Failed to parse OpenAPI spec: %v\n", err)
+		}
+		validator, validationErrs := validator.NewValidator(document)
+		if validationErrs != nil {
+			t.Fatalf("Failed to create validator: %v\n", validationErrs)
+		}
+		docValidator = validator
+	}
+	valid, errs := docValidator.ValidateHttpResponse(r, w)
+	if !valid {
+		t.Fatalf("Request body failed OpenAPI spec validation: %v", errs)
+	}
 }
