@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"git.houseofkummer.com/lior/home-dns/api/services/auth"
+	"git.houseofkummer.com/lior/home-dns/api/services/enforcer"
 	"git.houseofkummer.com/lior/home-dns/api/services/logger"
 	"git.houseofkummer.com/lior/home-dns/api/services/rest"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
@@ -23,6 +25,7 @@ func TestCreateRecord(t *testing.T) {
 		"/v1/records",
 		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
 	)
+	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusCreated {
@@ -51,6 +54,7 @@ func TestCreateRecordMissingZone(t *testing.T) {
 		"/v1/records",
 		strings.NewReader(`{"content": "@ A 127.0.0.1", "comment": "test"}`),
 	)
+	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusBadRequest {
@@ -79,6 +83,7 @@ func TestCreateRecordZoneNotFQDN(t *testing.T) {
 		"/v1/records",
 		strings.NewReader(`{"zone": "example.com", "content": "@ A 127.0.0.1", "comment": "test"}`),
 	)
+	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusBadRequest {
@@ -107,6 +112,7 @@ func TestCreateRecordMissingContent(t *testing.T) {
 		"/v1/records",
 		strings.NewReader(`{"zone": "example.com.", "comment": "test"}`),
 	)
+	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusBadRequest {
@@ -135,6 +141,7 @@ func TestCreateRecordMalformedContent(t *testing.T) {
 		"/v1/records",
 		strings.NewReader(`{"zone": "example.com.", "content": "@A127.0.0.1", "comment": "test"}`),
 	)
+	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusBadRequest {
@@ -160,6 +167,7 @@ func TestCreateRecordServerError(t *testing.T) {
 		"/v1/records",
 		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
 	)
+	auth.MockLogin(r, "alice")
 	r.Header.Add("Content-Type", "application/json")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusInternalServerError {
@@ -178,6 +186,37 @@ func TestCreateRecordServerError(t *testing.T) {
 	}
 }
 
+func TestCreateRecordUnauthorized(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestCreateRecordForbidden(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "bob")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d", w.Result().StatusCode)
+	}
+}
+
 func createTestHandler(returnError error) http.Handler {
 	var handler *chi.Mux
 	_ = fx.New(
@@ -185,13 +224,19 @@ func createTestHandler(returnError error) http.Handler {
 			storage.MockStorageOptions{
 				ReturnError: returnError,
 			},
+			enforcer.CasbinEnforcerOptions{
+				PolicyFile: "test_policy.csv",
+			},
 		),
 		fx.Provide(
 			logger.NewService,
 			rest.NewMockService,
 			storage.NewMockService,
+			enforcer.NewCasbinEnforcer,
+			auth.NewMockAuthenticator,
 		),
 		fx.Invoke(
+			auth.Register,
 			Register,
 		),
 		fx.Populate(

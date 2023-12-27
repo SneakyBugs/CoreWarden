@@ -28,6 +28,16 @@ func (s service) HandleCreate() http.HandlerFunc {
 			rest.RenderError(w, r, err)
 			return
 		}
+		ok, err := s.enforcer.IsAuthorized(r, data.Zone)
+		if err != nil {
+			s.logger.Error("failed to enforce action", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		if !ok {
+			rest.RenderError(w, r, &rest.ForbiddenError)
+			return
+		}
 		record, err := s.handler.CreateRecord(r.Context(), storage.RecordCreateParameters{
 			Zone:    data.Zone,
 			RR:      data.RR.String(),
