@@ -264,7 +264,7 @@ func TestReadRecordNotFound(t *testing.T) {
 	r := httptest.NewRequest(
 		http.MethodGet,
 		"/v1/records/1",
-		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+		nil,
 	)
 	auth.MockLogin(r, "alice")
 	h.ServeHTTP(w, r)
@@ -292,7 +292,7 @@ func TestReadRecordUnauthorized(t *testing.T) {
 	r = httptest.NewRequest(
 		http.MethodGet,
 		"/v1/records/1",
-		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+		nil,
 	)
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusUnauthorized {
@@ -319,12 +319,162 @@ func TestReadRecordForbidden(t *testing.T) {
 	r = httptest.NewRequest(
 		http.MethodGet,
 		"/v1/records/1",
-		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+		nil,
 	)
 	auth.MockLogin(r, "bob")
 	h.ServeHTTP(w, r)
 	if w.Result().StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestUpdateRecord(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodPut,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "changed"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodGet,
+		"/v1/records/1",
+		nil,
+	)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+	var response RecordResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if response.Comment != "changed" {
+		t.Errorf("Expected comment to be 'changed', got '%s'", response.Comment)
+	}
+}
+
+func TestUpdateRecordNotFound(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPut,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestUpdateRecordUnauthorized(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodPut,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestUpdateRecordForbiddenOldZone(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodPut,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.net.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "bob")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestUpdateRecordForbiddenNewZone(t *testing.T) {
+	h := createTestHandler(nil)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(
+		http.MethodPut,
+		"/v1/records/1",
+		strings.NewReader(`{"zone": "example.net.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	if w.Result().StatusCode != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d", w.Result().StatusCode)
 	}
 }
 

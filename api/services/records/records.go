@@ -160,7 +160,86 @@ func (s service) HandleRead() http.HandlerFunc {
 			CreatedAt: rec.CreatedAt,
 			UpdatedOn: rec.ModifiedOn,
 		})
+	}
+}
 
+func (s service) HandleUpdate() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		recordID := chi.URLParam(r, "id")
+		if recordID == "" {
+			s.logger.Error("empty id URL parameter")
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+		parsedID, err := strconv.Atoi(recordID)
+		if err != nil {
+			s.logger.Error("failed parsing ID to int", zap.Error(err))
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+		data := &RecordCreateRequest{}
+		if err := render.Bind(r, data); err != nil {
+			s.logger.Error("failed to bind body", zap.Error(err))
+			rest.RenderError(w, r, err)
+			return
+		}
+
+		// Enforce authorization on new zone.
+		ok, err := s.enforcer.IsAuthorized(r, data.Zone)
+		if err != nil {
+			s.logger.Error("failed to enforce action", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		if !ok {
+			s.logger.Error("unauthorized", zap.Error(err))
+			rest.RenderError(w, r, &rest.ForbiddenError)
+			return
+		}
+
+		// Read old record to enforce authorization.
+		existingRecord, err := s.handler.ReadRecord(r.Context(), parsedID)
+		if err != nil {
+			s.logger.Error("failed to read record", zap.Error(err))
+			if errors.Is(err, storage.RecordNotFoundError) {
+				rest.RenderError(w, r, &rest.NotFoundError)
+				return
+			}
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		ok, err = s.enforcer.IsAuthorized(r, existingRecord.Zone)
+		if err != nil {
+			s.logger.Error("failed to enforce action", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		if !ok {
+			s.logger.Error("unauthorized", zap.Error(err))
+			rest.RenderError(w, r, &rest.NotFoundError)
+			return
+		}
+
+		rec, err := s.handler.UpdateRecord(r.Context(), storage.RecordUpdateParameters{
+			Comment: data.Comment,
+			ID:      parsedID,
+			RR:      data.RR.String(),
+			Zone:    data.Zone,
+		})
+		if err != nil {
+			s.logger.Error("failed updating record", zap.Error(err))
+			rest.RenderError(w, r, &rest.InternalServerError)
+			return
+		}
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, RecordResponse{
+			ID:        rec.ID,
+			Zone:      rec.Zone,
+			Content:   rec.RR,
+			Comment:   rec.Comment,
+			CreatedAt: rec.CreatedAt,
+			UpdatedOn: rec.ModifiedOn,
+		})
 	}
 }
 
