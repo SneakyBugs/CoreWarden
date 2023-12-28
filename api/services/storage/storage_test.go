@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"git.houseofkummer.com/lior/home-dns/api/database"
+	"git.houseofkummer.com/lior/home-dns/api/services/health"
 	"github.com/miekg/dns"
 	migrate "github.com/rubenv/sql-migrate"
 	"go.uber.org/fx"
@@ -448,6 +449,7 @@ func createTestStorage() (s Storage, closer func(context.Context)) {
 			},
 		),
 		fx.Provide(
+			health.NewReadinessChecks,
 			NewService,
 		),
 		fx.Populate(

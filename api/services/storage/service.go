@@ -2,9 +2,11 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 
 	"git.houseofkummer.com/lior/home-dns/api/database"
 	"git.houseofkummer.com/lior/home-dns/api/database/queries"
+	"git.houseofkummer.com/lior/home-dns/api/services/health"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	migrate "github.com/rubenv/sql-migrate"
@@ -15,7 +17,7 @@ type Options struct {
 	ConnectionString string
 }
 
-func NewService(lc fx.Lifecycle, options Options) (Storage, error) {
+func NewService(lc fx.Lifecycle, options Options, rc *health.ReadinessChecks) (Storage, error) {
 	pool, err := pgxpool.New(context.Background(), options.ConnectionString)
 	if err != nil {
 		return nil, err
@@ -40,5 +42,16 @@ func NewService(lc fx.Lifecycle, options Options) (Storage, error) {
 			return nil
 		}},
 	)
+	rc.Add(&readinessCheck{
+		db: db,
+	})
 	return &PostgresStorage{queries: queries.New(pool)}, nil
+}
+
+type readinessCheck struct {
+	db *sql.DB
+}
+
+func (rc *readinessCheck) Ready() bool {
+	return rc.db.Ping() == nil
 }

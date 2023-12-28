@@ -5,6 +5,7 @@ import (
 
 	"git.houseofkummer.com/lior/home-dns/api/services/enforcer"
 	"git.houseofkummer.com/lior/home-dns/api/services/grpc"
+	"git.houseofkummer.com/lior/home-dns/api/services/health"
 	"git.houseofkummer.com/lior/home-dns/api/services/logger"
 	"git.houseofkummer.com/lior/home-dns/api/services/records"
 	"git.houseofkummer.com/lior/home-dns/api/services/resolver"
@@ -52,6 +53,7 @@ func NewApp(options Options) *fx.App {
 			grpc.NewListener,
 			grpc.NewService,
 			rest.NewService,
+			health.NewReadinessChecks,
 			logger.NewService,
 			storage.NewService,
 			enforcer.NewCasbinEnforcer,
@@ -61,6 +63,7 @@ func NewApp(options Options) *fx.App {
 			telemetry.Register,
 			resolver.Register,
 			records.Register,
+			health.Register,
 		),
 		fx.WithLogger(
 			logger.NewFxLogger,
