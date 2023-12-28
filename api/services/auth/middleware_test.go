@@ -60,18 +60,21 @@ func createTestHandler() http.Handler {
 			logger.NewService,
 			rest.NewMockService,
 			NewMockAuthenticator,
+			NewService,
 		),
 		fx.Invoke(
-			Register,
-			func(r *chi.Mux) {
-				r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
-					sub, ok := GetSubject(r.Context())
-					if !ok {
-						render.Status(r, http.StatusTeapot)
+			func(rRoot *chi.Mux, a Service) {
+				rRoot.Group(func(r chi.Router) {
+					r.Use(a.Middleware())
+					r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
+						sub, ok := GetSubject(r.Context())
+						if !ok {
+							render.Status(r, http.StatusTeapot)
+							render.PlainText(w, r, sub)
+							return
+						}
 						render.PlainText(w, r, sub)
-						return
-					}
-					render.PlainText(w, r, sub)
+					})
 				})
 			},
 		),

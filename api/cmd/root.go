@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"git.houseofkummer.com/lior/home-dns/api/services"
+	"git.houseofkummer.com/lior/home-dns/api/services/auth"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -33,6 +34,31 @@ func CreateRootCommand() Command {
 			"For example:\n" +
 			"  postgres-host flag becomes DNSAPI_POSTGRES_HOST",
 		Run: func(cmd *cobra.Command, args []string) {
+			var serviceAccounts []struct {
+				ID         string
+				SecretHash string `mapstructure:"secret-hash"`
+			}
+			err := cfg.UnmarshalKey("service-accounts", &serviceAccounts)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			parsedServiceAccounts := make([]auth.ServiceAccount, len(serviceAccounts))
+			for i, sa := range serviceAccounts {
+				if sa.ID == "" {
+					fmt.Printf("service-accounts[%d].id is required\n", i)
+					os.Exit(1)
+				}
+				if sa.SecretHash == "" {
+					fmt.Printf("service-accounts[%d].secret-hash is required\n", i)
+					os.Exit(1)
+				}
+				parsedServiceAccounts[i] = auth.ServiceAccount{
+					ID:         sa.ID,
+					SecretHash: []byte(sa.SecretHash),
+				}
+			}
+
 			app := services.NewApp(services.Options{
 				GRPCPort:         cfg.GetUint16("grpc-port"),
 				HTTPPort:         cfg.GetUint16("http-port"),
@@ -42,6 +68,7 @@ func CreateRootCommand() Command {
 				PostgresPort:     cfg.GetUint16("postgres-port"),
 				PostgresUser:     cfg.GetString("postgres-user"),
 				PolicyFile:       cfg.GetString("policy-file"),
+				ServiceAccounts:  parsedServiceAccounts,
 			})
 			app.Run()
 		},

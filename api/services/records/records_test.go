@@ -791,9 +791,9 @@ func createTestHandler(returnError error) http.Handler {
 			storage.NewMockService,
 			enforcer.NewCasbinEnforcer,
 			auth.NewMockAuthenticator,
+			auth.NewService,
 		),
 		fx.Invoke(
-			auth.Register,
 			Register,
 		),
 		fx.Populate(

@@ -1,6 +1,7 @@
 package records
 
 import (
+	"git.houseofkummer.com/lior/home-dns/api/services/auth"
 	"git.houseofkummer.com/lior/home-dns/api/services/enforcer"
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
 	"github.com/go-chi/chi/v5"
@@ -13,15 +14,18 @@ type service struct {
 	logger   *zap.Logger
 }
 
-func Register(r *chi.Mux, e enforcer.Enforcer, s storage.Storage, l *zap.Logger) {
+func Register(r *chi.Mux, e enforcer.Enforcer, s storage.Storage, l *zap.Logger, a auth.Service) {
 	sr := service{
 		enforcer: enforcer.NewRequestEnforcer(e, "records"),
 		handler:  s,
 		logger:   l,
 	}
-	r.Get("/v1/records", sr.HandleList())
-	r.Post("/v1/records", sr.HandleCreate())
-	r.Get("/v1/records/{id}", sr.HandleRead())
-	r.Put("/v1/records/{id}", sr.HandleUpdate())
-	r.Delete("/v1/records/{id}", sr.HandleDelete())
+	r.Group(func(r chi.Router) {
+		r.Use(a.Middleware())
+		r.Get("/v1/records", sr.HandleList())
+		r.Post("/v1/records", sr.HandleCreate())
+		r.Get("/v1/records/{id}", sr.HandleRead())
+		r.Put("/v1/records/{id}", sr.HandleUpdate())
+		r.Delete("/v1/records/{id}", sr.HandleDelete())
+	})
 }
