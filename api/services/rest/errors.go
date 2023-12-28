@@ -30,6 +30,11 @@ var NotFoundError = ErrorResponse{
 	Status:  http.StatusNotFound,
 }
 
+var MethodNotAllowedError = ErrorResponse{
+	Message: "method not allowed",
+	Status:  http.StatusMethodNotAllowed,
+}
+
 var UnauthorizedError = ErrorResponse{
 	Message: "unauthorized",
 	Status:  http.StatusUnauthorized,
@@ -73,4 +78,10 @@ func RenderError(w http.ResponseWriter, r *http.Request, e error) {
 	}
 	render.Status(r, InternalServerError.Status)
 	render.JSON(w, r, InternalServerError)
+}
+
+func ErrorHandler(err error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		RenderError(w, r, err)
+	}
 }

@@ -34,12 +34,14 @@ func NewService(lc fx.Lifecycle, o Options) *chi.Mux {
 	return r
 }
 
-func NewMockService(lc fx.Lifecycle) *chi.Mux {
+func NewMockService() *chi.Mux {
 	return newRouter()
 }
 
 func newRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP)
+	r.NotFound(ErrorHandler(&NotFoundError))
+	r.MethodNotAllowed(ErrorHandler(&MethodNotAllowedError))
 	return r
 }
