@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "api.fullname" . }}
+  labels:
+    {{- include "api.labels" . | nindent 4 }}
+data:
+  policy.csv: |-
+    {{- .Values.config.policies | nindent 4 }}
+  dns-api.yaml: |-
+    {{- with .Values.config.serviceAccounts }}
+    {{- range . }}
+    service-accounts:
+      - id: {{ quote .id }}
+        secret-hash: {{ quote .secretHash }}
+    {{- end }}
+    {{- end }}
+  postgresHost: {{ quote .Values.config.postgres.host }}
+  postgresPort: {{ quote .Values.config.postgres.port }}
+  postgresDatabase: {{ quote .Values.config.postgres.database }}
+  {{- with .Values.config.postgres.existingSecret.name }}
+  {{- else }}
+  postgresUser: {{ quote .Values.config.postgres.user }}
+  {{- end }}

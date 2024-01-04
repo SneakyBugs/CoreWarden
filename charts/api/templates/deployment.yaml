@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api.fullname" . }}
+  labels:
+    {{- include "api.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "api.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DNSAPI_POLICY_FILE
+              value: /etc/api/policy.csv
+            - name: DNSAPI_CONFIG_FILE
+              value: /etc/api/dns-api.yaml
+            {{- $name := include "api.fullname" . }}
+            - name: DNSAPI_POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}
+                  key: postgresHost
+            - name: DNSAPI_POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}
+                  key: postgresPort
+            - name: DNSAPI_POSTGRES_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}
+                  key: postgresDatabase
+            {{- $existingSecret := .Values.config.postgres.existingSecret }}
+            {{- with .Values.config.postgres.existingSecret.name }}
+            - name: DNSAPI_POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $existingSecret.usernameKey }}
+            - name: DNSAPI_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $existingSecret.passwordKey }}
+            {{- else }}
+            - name: DNSAPI_POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $name }}
+                  key: postgresUser
+            - name: DNSAPI_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $name }}
+                  key: postgresSecret
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 6970
+              protocol: TCP
+            - name: grpc
+              containerPort: 6969
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /-/liveness
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /-/readiness
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/api
+          {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}
+      {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
