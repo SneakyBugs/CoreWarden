@@ -36,6 +36,7 @@ gen:protoc:
     - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
     - cd proto
     - protoc --go_out=../api/resolver --go_opt=paths=source_relative --go-grpc_out=../api/resolver --go-grpc_opt=paths=source_relative resolver.proto
+    - protoc --go_out=../coredns/plugin/injector/resolver --go_opt=paths=source_relative --go-grpc_out=../coredns/plugin/injector/resolver --go-grpc_opt=paths=source_relative resolver.proto
     - test -z "$(git status --short)"
 
 test:coredns:
