@@ -9,6 +9,8 @@ import (
 
 	"git.houseofkummer.com/lior/home-dns/api/database/queries"
 	"github.com/miekg/dns"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Storage interface {
@@ -23,6 +25,15 @@ type Storage interface {
 var RecordNotFoundError = errors.New("record not found")
 var ServerError = errors.New("server error")
 
+var ResolveServerError = status.Error(
+	codes.Internal,
+	"internal server error",
+)
+var ResolveRecordNotFoundError = status.Error(
+	codes.NotFound,
+	"record not found",
+)
+
 type PostgresStorage struct {
 	queries *queries.Queries
 }
@@ -33,14 +44,14 @@ func (s *PostgresStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSRespon
 		Type: int32(q.Qtype),
 	})
 	if err != nil {
-		return DNSResponse{}, err
+		return DNSResponse{}, ResolveServerError
 	}
 	if len(r) != 0 {
 		answer := make([]string, len(r))
 		for i, record := range r {
 			rr, err := replaceName(record.Content, q.Name)
 			if err != nil {
-				return DNSResponse{}, fmt.Errorf("failed parsing record")
+				return DNSResponse{}, ResolveServerError
 			}
 			answer[i] = rr
 		}
@@ -58,10 +69,10 @@ func (s *PostgresStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSRespon
 		Type:  int32(q.Qtype),
 	})
 	if err != nil {
-		return DNSResponse{}, err
+		return DNSResponse{}, ResolveServerError
 	}
 	if len(r) == 0 {
-		return DNSResponse{}, fmt.Errorf("no records found")
+		return DNSResponse{}, ResolveRecordNotFoundError
 	}
 	maxLength := 0
 	answer := []string{}
@@ -70,13 +81,13 @@ func (s *PostgresStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSRespon
 			maxLength = len(record.Name)
 			rr, err := replaceName(record.Content, q.Name)
 			if err != nil {
-				return DNSResponse{}, fmt.Errorf("failed parsing record")
+				return DNSResponse{}, ResolveServerError
 			}
 			answer = []string{rr}
 		} else if maxLength == len(record.Name) {
 			rr, err := replaceName(record.Content, q.Name)
 			if err != nil {
-				return DNSResponse{}, fmt.Errorf("failed parsing record")
+				return DNSResponse{}, ResolveServerError
 			}
 			answer = append(answer, rr)
 		}

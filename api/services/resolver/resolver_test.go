@@ -42,7 +42,7 @@ func TestResolve(t *testing.T) {
 }
 
 func TestResolveNotFound(t *testing.T) {
-	client, closer := createTestClient(t, RecordNotFoundError)
+	client, closer := createTestClient(t, storage.ResolveRecordNotFoundError)
 	defer closer(context.Background())
 
 	_, err := client.Resolve(
@@ -58,7 +58,7 @@ func TestResolveNotFound(t *testing.T) {
 }
 
 func TestResolveServerError(t *testing.T) {
-	client, closer := createTestClient(t, ServerError)
+	client, closer := createTestClient(t, storage.ResolveServerError)
 	defer closer(context.Background())
 
 	_, err := client.Resolve(

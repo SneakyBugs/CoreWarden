@@ -13,6 +13,9 @@
     health_check 5s
   }
   health
+  injector {
+    target api:6969
+  }
   prometheus 0.0.0.0:9153
   ready
   slog
