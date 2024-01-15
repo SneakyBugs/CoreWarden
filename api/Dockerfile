@@ -1,11 +1,13 @@
+# Needs to be built from the root directory.
 FROM golang:1.21.3-bookworm AS build
 
-WORKDIR /api
+WORKDIR /build
 
-COPY . .
-RUN go build .
+COPY go.mod go.sum ./
+COPY api api
+RUN cd api && go build .
 
 FROM gcr.io/distroless/base-debian12:nonroot
 
-COPY --from=build /api/api /
+COPY --from=build /build/api /
 ENTRYPOINT ["/api"]
