@@ -1,4 +1,4 @@
-FROM golang:1.21.3-bookworm AS build
+FROM golang:1.22.3-bookworm AS build
 
 WORKDIR /coredns
 

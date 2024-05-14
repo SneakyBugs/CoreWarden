@@ -18,7 +18,7 @@ lint:api:
 
 gen:sqlc:
   stage: validate
-  image: golang:1.21.4-bookworm
+  image: golang:1.22.3-bookworm
   script:
     - wget -O /tmp/sqlc.tar.gz https://github.com/sqlc-dev/sqlc/releases/download/v1.24.0/sqlc_1.24.0_linux_amd64.tar.gz
     - tar -xzf /tmp/sqlc.tar.gz
@@ -28,7 +28,7 @@ gen:sqlc:
 
 gen:protoc:
   stage: validate
-  image: golang:1.21.4-bookworm
+  image: golang:1.22.3-bookworm
   script:
     - apt-get update
     - apt-get install --yes protobuf-compiler
@@ -41,7 +41,7 @@ gen:protoc:
 
 test:coredns:
   stage: validate
-  image: golang:1.21.4-bookworm
+  image: golang:1.22.3-bookworm
   script:
     - cd coredns
     # Use gotestsum to generate a JUnit-like report.
@@ -54,7 +54,7 @@ test:coredns:
 
 test:api:
   stage: validate
-  image: golang:1.21.4-bookworm
+  image: golang:1.22.3-bookworm
   variables:
     POSTGRES_DB: "development"
     POSTGRES_USER: "development"
@@ -73,7 +73,7 @@ test:api:
 
 test:e2e:
   stage: validate
-  image: golang:1.21.4-bookworm
+  image: golang:1.22.3-bookworm
   script:
     - apt-get update
     - apt-get install --yes dnsutils

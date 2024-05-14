@@ -1,5 +1,5 @@
 # Needs to be built from the root directory.
-FROM golang:1.21.3-bookworm AS build
+FROM golang:1.22.3-bookworm AS build
 
 WORKDIR /build
 
