@@ -168,6 +168,151 @@ func TestReadRecordUnauthorized(t *testing.T) {
 	validateRequest(t, m.LastRequest)
 }
 
+func TestUpdateRecord(t *testing.T) {
+	m := MockHTTPClient{
+		Response: createRecordResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
+		Error:    nil,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	r, err := c.UpdateRecord(UpdateRecordParams{
+		ID:      1,
+		Zone:    "example.com.",
+		RR:      "@ IN A 127.0.0.1",
+		Comment: "example",
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if r.Zone != "example.com." {
+		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r.Zone)
+	}
+	if r.RR != "@ IN A 127.0.0.1" {
+		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r.RR)
+	}
+	if r.Comment != "example" {
+		t.Errorf("Expected comment to be 'example', got '%s'\n", r.Comment)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestUpdateRecordParamError(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.BadRequestErrorResponse{
+			Fields: []rest.KeyError{
+				{
+					Key:     "zone",
+					Message: "required",
+				},
+			},
+		},
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.UpdateRecord(UpdateRecordParams{
+		ID:      1,
+		RR:      "@ IN A 127.0.0.1",
+		Comment: "example",
+	})
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIParameterError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if len(apiErr.fieldErrors) != 1 {
+		t.Fatalf("Expected fieldErrors length to be 1, got %d\n", len(apiErr.fieldErrors))
+	}
+	if apiErr.fieldErrors[0].Key != "Zone" {
+		t.Fatalf("Expected fieldErrors[0].Key to be 'zone', got '%s'\n", apiErr.fieldErrors[0].Key)
+	}
+	if apiErr.fieldErrors[0].Message != "required" {
+		t.Fatalf("Expected fieldErrors[0].Message to be 'required', got '%s'\n", apiErr.fieldErrors[0].Message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestUpdateRecordNotFound(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.NotFoundError,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.UpdateRecord(UpdateRecordParams{
+		ID:      1,
+		Zone:    "example.com.",
+		RR:      "@ IN A 127.0.0.1",
+		Comment: "example",
+	})
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if apiErr.status != http.StatusNotFound {
+		t.Fatalf("Expected status to be %d, got %d\n", http.StatusNotFound, apiErr.status)
+	}
+	if apiErr.message != "not found" {
+		t.Fatalf("Expected message to be 'not found', got %s\n", apiErr.message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestUpdateRecordUnauthorized(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.UnauthorizedError,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.UpdateRecord(UpdateRecordParams{
+		ID:      1,
+		Zone:    "example.com.",
+		RR:      "@ IN A 127.0.0.1",
+		Comment: "example",
+	})
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if apiErr.status != http.StatusUnauthorized {
+		t.Fatalf("Expected status to be %d, got %d\n", http.StatusUnauthorized, apiErr.status)
+	}
+	if apiErr.message != "unauthorized" {
+		t.Fatalf("Expected message to be 'unauthorized', got %s\n", apiErr.message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
 type MockHTTPClient struct {
 	LastRequest *http.Request
 	Response    *http.Response

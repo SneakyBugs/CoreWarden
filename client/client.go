@@ -264,7 +264,45 @@ func (c *Client) ReadRecord(id int) (Record, error) {
 }
 
 func (c *Client) UpdateRecord(params UpdateRecordParams) (Record, error) {
-	return Record{}, errors.New("TODO")
+	req, err := paramsToRequest(
+		"PUT",
+		fmt.Sprintf("%s/records/{{ .ID }}", c.endpoint),
+		params,
+		c.credentials,
+	)
+	if err != nil {
+		return Record{}, err
+	}
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return Record{}, err
+	}
+	apiErr, parsingErr := parseErrorResponse(res, params)
+	if parsingErr != nil {
+		return Record{}, parsingErr
+	}
+	if apiErr != nil {
+		return Record{}, apiErr
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Record{}, err
+	}
+
+	var parsedRecord records.RecordResponse
+	if err = json.Unmarshal(body, &parsedRecord); err != nil {
+		return Record{}, err
+	}
+
+	return Record{
+		ID:        parsedRecord.ID,
+		Zone:      parsedRecord.Zone,
+		RR:        parsedRecord.Content,
+		Comment:   parsedRecord.Comment,
+		CreatedAt: parsedRecord.CreatedAt,
+		UpdatedOn: parsedRecord.UpdatedOn,
+	}, nil
 }
 
 func (c *Client) DeleteRecord(id int) (Record, error) {
