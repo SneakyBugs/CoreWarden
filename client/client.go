@@ -31,6 +31,22 @@ type Client struct {
 	credentials Credentials
 }
 
+type Credentials struct {
+	ClientID     string
+	ClientSecret string
+}
+
+func NewClient(options ClientOptions) Client {
+	return Client{
+		httpClient: &http.Client{},
+		endpoint:   options.APIEndpoint,
+		credentials: Credentials{
+			ClientID:     options.ID,
+			ClientSecret: options.Secret,
+		},
+	}
+}
+
 type Record struct {
 	ID        int
 	Zone      string
@@ -51,11 +67,6 @@ type UpdateRecordParams struct {
 	Zone    string `json:"zone"`
 	RR      string `json:"content"`
 	Comment string `json:"comment"`
-}
-
-type Credentials struct {
-	ClientID     string
-	ClientSecret string
 }
 
 // Every field on the struct is available in the URL template.
