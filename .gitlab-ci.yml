@@ -71,6 +71,19 @@ test:api:
     reports:
       junit: api/report.xml
 
+test:client:
+  stage: validate
+  image: golang:1.22.3-bookworm
+  script:
+    - cd client
+    # Use gotestsum to generate a JUnit-like report.
+    # Pass options (after --) to make go test generate a coverage report.
+    - go run gotest.tools/gotestsum@latest --junitfile report.xml --format testname
+  artifacts:
+    when: always
+    reports:
+      junit: coredns/report.xml
+
 test:e2e:
   stage: validate
   image: golang:1.22.3-bookworm
