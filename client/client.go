@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,6 +77,20 @@ func paramsToRequest(method string, url string, params any, credentials Credenti
 	req, err = http.NewRequest(method, b.String(), bytes.NewBuffer(body))
 	req.SetBasicAuth(credentials.ClientID, credentials.ClientSecret)
 	req.Header.Add("Content-Type", "application/json")
+
+	paramsValue := reflect.ValueOf(params)
+	query := req.URL.Query()
+	for _, field := range reflect.VisibleFields(paramsValue.Type()) {
+		if paramName := field.Tag.Get("param"); paramName != "" {
+			fieldValue := paramsValue.FieldByName(field.Name)
+			if fieldValue.Kind() != reflect.String {
+				return nil, fmt.Errorf("param tagged field '%s' must be of type string", field.Name)
+			}
+			query.Set(paramName, fieldValue.String())
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+
 	return
 }
 
@@ -104,12 +117,13 @@ type ParameterErrorField struct {
 }
 
 type APIParameterError struct {
-	fieldErrors []ParameterErrorField
+	FieldErrors []ParameterErrorField
+	ParamErrors []ParameterErrorField
 }
 
 func (e *APIParameterError) Error() string {
 	msgs := []string{}
-	for _, fieldErr := range e.fieldErrors {
+	for _, fieldErr := range e.FieldErrors {
 		msgs = append(msgs, fmt.Sprintf("%s: %s", fieldErr.Key, fieldErr.Message))
 	}
 	return strings.Join(msgs, ", ") + "."
@@ -128,32 +142,43 @@ func parseErrorResponse(res *http.Response, params any) (error, error) {
 
 	if res.StatusCode == http.StatusBadRequest {
 		paramErr := APIParameterError{
-			fieldErrors: []ParameterErrorField{},
+			FieldErrors: []ParameterErrorField{},
+			ParamErrors: []ParameterErrorField{},
 		}
 		var parsedResponse rest.BadRequestErrorResponse
 		if err = json.Unmarshal(body, &parsedResponse); err != nil {
 			return nil, err
 		}
 
-		// Create mapping for field name conversion from API request body JSON fields
-		// to struct fields.
+		// Create mapping for field and param name conversion from API request body JSON
+		// fields to struct fields.
 		fieldNamesMap := map[string]string{}
+		paramNamesMap := map[string]string{}
 		for _, field := range reflect.VisibleFields(reflect.TypeOf(params)) {
 			if fieldName := field.Tag.Get("json"); fieldName != "" {
 				fieldNamesMap[fieldName] = field.Name
 			}
+			if paramName := field.Tag.Get("param"); paramName != "" {
+				paramNamesMap[paramName] = field.Name
+			}
 		}
 
-		// Map body JSON field errors to struct fields:
+		// Map body JSON field errors to struct fields.
 		for _, keyErr := range parsedResponse.Fields {
-			paramErr.fieldErrors = append(paramErr.fieldErrors, ParameterErrorField{
+			paramErr.FieldErrors = append(paramErr.FieldErrors, ParameterErrorField{
 				Key:     fieldNamesMap[keyErr.Key],
 				Message: keyErr.Message,
 			})
 
 		}
 
-		// TODO Params
+		// Map param errors to struct fields.
+		for _, keyErr := range parsedResponse.Params {
+			paramErr.ParamErrors = append(paramErr.ParamErrors, ParameterErrorField{
+				Key:     paramNamesMap[keyErr.Key],
+				Message: keyErr.Message,
+			})
+		}
 
 		return &APIError{
 			message:      "bad parameters",
@@ -353,5 +378,54 @@ func (c *Client) DeleteRecord(id int) (Record, error) {
 }
 
 func (c *Client) ListRecords(zone string) ([]Record, error) {
-	return []Record{}, errors.New("TODO")
+	params := struct {
+		Zone string `param:"zone"`
+	}{
+		Zone: zone,
+	}
+	req, err := paramsToRequest(
+		"GET",
+		fmt.Sprintf("%s/records", c.endpoint),
+		params,
+		c.credentials,
+	)
+	if err != nil {
+		return []Record{}, err
+	}
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return []Record{}, err
+	}
+	apiErr, parsingErr := parseErrorResponse(res, params)
+	if parsingErr != nil {
+		return []Record{}, parsingErr
+	}
+	if apiErr != nil {
+		return []Record{}, apiErr
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return []Record{}, err
+	}
+
+	var parsedRecords []records.RecordResponse
+	if err = json.Unmarshal(body, &parsedRecords); err != nil {
+		return []Record{}, err
+	}
+
+	records := make([]Record, len(parsedRecords))
+
+	for i, record := range parsedRecords {
+		records[i] = Record{
+			ID:        record.ID,
+			Zone:      record.Zone,
+			RR:        record.Content,
+			Comment:   record.Comment,
+			CreatedAt: record.CreatedAt,
+			UpdatedOn: record.UpdatedOn,
+		}
+	}
+
+	return records, nil
 }

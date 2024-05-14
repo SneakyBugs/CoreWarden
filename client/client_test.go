@@ -233,14 +233,17 @@ func TestUpdateRecordParamError(t *testing.T) {
 	if !errors.As(err, &apiErr) {
 		t.Fatalf("Expected err to be an APIError\n")
 	}
-	if len(apiErr.fieldErrors) != 1 {
-		t.Fatalf("Expected fieldErrors length to be 1, got %d\n", len(apiErr.fieldErrors))
+	if len(apiErr.ParamErrors) != 0 {
+		t.Fatalf("Expected ParamErrors length to be 0, got %d\n", len(apiErr.FieldErrors))
 	}
-	if apiErr.fieldErrors[0].Key != "Zone" {
-		t.Fatalf("Expected fieldErrors[0].Key to be 'zone', got '%s'\n", apiErr.fieldErrors[0].Key)
+	if len(apiErr.FieldErrors) != 1 {
+		t.Fatalf("Expected FieldErrors length to be 1, got %d\n", len(apiErr.FieldErrors))
 	}
-	if apiErr.fieldErrors[0].Message != "required" {
-		t.Fatalf("Expected fieldErrors[0].Message to be 'required', got '%s'\n", apiErr.fieldErrors[0].Message)
+	if apiErr.FieldErrors[0].Key != "Zone" {
+		t.Fatalf("Expected FieldErrors[0].Key to be 'Zone', got '%s'\n", apiErr.FieldErrors[0].Key)
+	}
+	if apiErr.FieldErrors[0].Message != "required" {
+		t.Fatalf("Expected FieldErrors[0].Message to be 'required', got '%s'\n", apiErr.FieldErrors[0].Message)
 	}
 	validateRequest(t, m.LastRequest)
 }
@@ -400,6 +403,109 @@ func TestDeleteRecordUnauthorized(t *testing.T) {
 	validateRequest(t, m.LastRequest)
 }
 
+func TestListRecords(t *testing.T) {
+	m := MockHTTPClient{
+		Response: createRecordListResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
+		Error:    nil,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	r, err := c.ListRecords("example.com.")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if len(r) != 1 {
+		t.Errorf("Expected response length to be 1, got %d\n", len(r))
+	}
+	if r[0].Zone != "example.com." {
+		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r[0].Zone)
+	}
+	if r[0].RR != "@ IN A 127.0.0.1" {
+		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r[0].RR)
+	}
+	if r[0].Comment != "example" {
+		t.Errorf("Expected comment to be 'example', got '%s'\n", r[0].Comment)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestListRecordsParamError(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.BadRequestErrorResponse{
+			Params: []rest.KeyError{
+				{
+					Key:     "zone",
+					Message: "must be FQDN",
+				},
+			},
+		},
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.ListRecords("example.com.")
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIParameterError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if len(apiErr.FieldErrors) != 0 {
+		t.Fatalf("Expected FieldErrors length to be 0, got %d\n", len(apiErr.FieldErrors))
+	}
+	if len(apiErr.ParamErrors) != 1 {
+		t.Fatalf("Expected ParamErrors length to be 1, got %d\n", len(apiErr.FieldErrors))
+	}
+	if apiErr.ParamErrors[0].Key != "Zone" {
+		t.Fatalf("Expected ParamErrors[0].Key to be 'Zone', got '%s'\n", apiErr.FieldErrors[0].Key)
+	}
+	if apiErr.ParamErrors[0].Message != "must be FQDN" {
+		t.Fatalf("Expected ParamErrors[0].Message to be 'must be FQDN', got '%s'\n", apiErr.FieldErrors[0].Message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestListRecordsUnauthorized(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.UnauthorizedError,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.ListRecords("example.com.")
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if apiErr.status != http.StatusUnauthorized {
+		t.Fatalf("Expected status to be %d, got %d\n", http.StatusUnauthorized, apiErr.status)
+	}
+	if apiErr.message != "unauthorized" {
+		t.Fatalf("Expected message to be 'unauthorized', got %s\n", apiErr.message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
 type MockHTTPClient struct {
 	LastRequest *http.Request
 	Response    *http.Response
@@ -434,6 +540,23 @@ func createRecordResponse(t *testing.T, id int, zone string, content string, com
 		CreatedAt: now,
 		UpdatedOn: now,
 	})
+	if err != nil {
+		t.Fatalf("error encoding record response: %v\n", err)
+	}
+	return w.Result()
+}
+
+func createRecordListResponse(t *testing.T, id int, zone string, content string, comment string) *http.Response {
+	w := httptest.NewRecorder()
+	now := time.Now()
+	err := json.NewEncoder(w).Encode([]records.RecordResponse{{
+		ID:        id,
+		Zone:      zone,
+		Content:   content,
+		Comment:   comment,
+		CreatedAt: now,
+		UpdatedOn: now,
+	}})
 	if err != nil {
 		t.Fatalf("error encoding record response: %v\n", err)
 	}
