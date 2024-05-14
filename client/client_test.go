@@ -110,6 +110,64 @@ func TestReadRecord(t *testing.T) {
 	validateRequest(t, m.LastRequest)
 }
 
+func TestReadRecordNotFound(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.NotFoundError,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.ReadRecord(1)
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if apiErr.status != http.StatusNotFound {
+		t.Fatalf("Expected status to be %d, got %d\n", http.StatusNotFound, apiErr.status)
+	}
+	if apiErr.message != "not found" {
+		t.Fatalf("Expected message to be 'not found', got %s\n", apiErr.message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestReadRecordUnauthorized(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.UnauthorizedError,
+	}
+	c := Client{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.ReadRecord(1)
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if apiErr.status != http.StatusUnauthorized {
+		t.Fatalf("Expected status to be %d, got %d\n", http.StatusUnauthorized, apiErr.status)
+	}
+	if apiErr.message != "unauthorized" {
+		t.Fatalf("Expected message to be 'unauthorized', got %s\n", apiErr.message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
 type MockHTTPClient struct {
 	LastRequest *http.Request
 	Response    *http.Response
