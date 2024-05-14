@@ -2,18 +2,10 @@ stages:
   - validate
   - deliver
 
-lint:coredns:
+lint:golangci:
   stage: validate
   image: golangci/golangci-lint:v1.55.2
   script:
-    - cd coredns
-    - golangci-lint run ./...
-
-lint:api:
-  stage: validate
-  image: golangci/golangci-lint:v1.55.2
-  script:
-    - cd api
     - golangci-lint run --timeout=5m ./...
 
 gen:sqlc:
@@ -39,20 +31,7 @@ gen:protoc:
     - protoc --go_out=../coredns/plugin/injector/resolver --go_opt=paths=source_relative --go-grpc_out=../coredns/plugin/injector/resolver --go-grpc_opt=paths=source_relative resolver.proto
     - test -z "$(git status --short)"
 
-test:coredns:
-  stage: validate
-  image: golang:1.22.3-bookworm
-  script:
-    - cd coredns
-    # Use gotestsum to generate a JUnit-like report.
-    # Pass options (after --) to make go test generate a coverage report.
-    - go run gotest.tools/gotestsum@latest --junitfile report.xml --format testname
-  artifacts:
-    when: always
-    reports:
-      junit: coredns/report.xml
-
-test:api:
+test:unit:
   stage: validate
   image: golang:1.22.3-bookworm
   variables:
@@ -60,29 +39,15 @@ test:api:
     POSTGRES_USER: "development"
     POSTGRES_PASSWORD: "development"
   services:
-    - name: postgres:16.1-alpine
+    - name: postgres:16.3-alpine
   script:
-    - cd api
     # Use gotestsum to generate a JUnit-like report.
     # Pass options (after --) to make go test generate a coverage report.
     - go run gotest.tools/gotestsum@latest --junitfile report.xml --format testname
   artifacts:
     when: always
     reports:
-      junit: api/report.xml
-
-test:client:
-  stage: validate
-  image: golang:1.22.3-bookworm
-  script:
-    - cd client
-    # Use gotestsum to generate a JUnit-like report.
-    # Pass options (after --) to make go test generate a coverage report.
-    - go run gotest.tools/gotestsum@latest --junitfile report.xml --format testname
-  artifacts:
-    when: always
-    reports:
-      junit: coredns/report.xml
+      junit: report.xml
 
 test:e2e:
   stage: validate
