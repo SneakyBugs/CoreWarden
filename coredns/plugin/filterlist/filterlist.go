@@ -25,6 +25,10 @@ type FilterList struct {
 }
 
 func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	if fl.Engine == nil {
+		return plugin.NextOrFailure(fl.Name(), fl.Next, ctx, w, r)
+	}
+
 	state := request.Request{W: w, Req: r}
 	hostname := strings.TrimSuffix(state.Name(), ".")
 
@@ -71,10 +75,6 @@ func getMatchingListID(result *urlfilter.DNSResult) (int, bool) {
 
 func (fl FilterList) Name() string {
 	return name
-}
-
-func (fl FilterList) Ready() bool {
-	return fl.Engine != nil
 }
 
 func CreateEngine(rules []string) (*urlfilter.DNSEngine, error) {
