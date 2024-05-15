@@ -5,9 +5,12 @@ metadata:
   name: {{ include "coredns.fullname" . }}-tcp
   labels:
     {{- include "coredns.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
-  externalTrafficPolicy: Local
   ports:
     - port: {{ .Values.service.port }}
       targetPort: dns-tcp
@@ -22,9 +25,12 @@ metadata:
   name: {{ include "coredns.fullname" . }}-udp
   labels:
     {{- include "coredns.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
-  externalTrafficPolicy: Local
   ports:
     - port: {{ .Values.service.port }}
       targetPort: dns-udp
