@@ -26,6 +26,9 @@ config:
     blocklists:
       - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
 
+  # Injector gRPC server address.
+  injectorTarget: api:6969
+
 podMonitor:
   # Set to true to create PodMonitor resources to collect metrics from CoreDNS.
   enabled: false

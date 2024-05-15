@@ -1,5 +1,5 @@
 {{- define "coredns.corefile" -}}
-. {
+.:1053 {
   cache
   errors
   {{- with .Values.config.zones }}
@@ -14,7 +14,7 @@
   }
   health
   injector {
-    target api:6969
+    target {{ .Values.config.injectorTarget }}
   }
   prometheus 0.0.0.0:9153
   ready

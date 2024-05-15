@@ -49,10 +49,10 @@ spec:
               containerPort: 9153
               protocol: TCP
             - name: dns-tcp
-              containerPort: 53
+              containerPort: 1053
               protocol: TCP
             - name: dns-udp
-              containerPort: 53
+              containerPort: 1053
               protocol: UDP
           livenessProbe:
             httpGet:
