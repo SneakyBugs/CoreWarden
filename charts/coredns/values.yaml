@@ -64,8 +64,8 @@ securityContext:
 service:
   type: LoadBalancer
   port: 53
-  annotations:
-    metallb.universe.tf/allow-shared-ip: dns
+  # annotations:
+  #   metallb.universe.tf/allow-shared-ip: dns
 
 ingress:
   enabled: false
