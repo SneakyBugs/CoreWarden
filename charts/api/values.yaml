@@ -9,7 +9,7 @@ config:
   serviceAccounts:
     # alice:debug
     - id: alice
-      secretHash: $2a$16$HRLEWm8fAt4YASN6aTYj6.KZGIgANCXTLRuI.4A.KYpPRUfbxS4rW
+      secretHash: $2a$10$jjolj440dNTg3ZdgjXKJ2ODhE3zF6nWm.HVBTbD09OF75wrSWAQiy
   postgres:
     host: postgres-postgresql
     port: 5432

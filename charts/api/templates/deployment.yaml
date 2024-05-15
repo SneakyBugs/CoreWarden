@@ -33,11 +33,12 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --config
+            - /etc/api/dns-api.yaml
           env:
             - name: DNSAPI_POLICY_FILE
               value: /etc/api/policy.csv
-            - name: DNSAPI_CONFIG_FILE
-              value: /etc/api/dns-api.yaml
             {{- $name := include "api.fullname" . }}
             - name: DNSAPI_POSTGRES_HOST
               valueFrom:

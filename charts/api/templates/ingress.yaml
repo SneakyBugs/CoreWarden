@@ -14,7 +14,7 @@ spec:
     - http:
         paths:
           - pathType: Prefix
-            path: /api
+            path: /v1
             backend:
               service:
                 name: {{ $fullName }}
