@@ -11,6 +11,7 @@ import (
 
 	"git.houseofkummer.com/lior/home-dns/api/services/records"
 	"git.houseofkummer.com/lior/home-dns/api/services/rest"
+	"github.com/miekg/dns"
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
 )
@@ -39,9 +40,7 @@ func TestCreateRecord(t *testing.T) {
 	if r.Zone != "example.com." {
 		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r.Zone)
 	}
-	if r.RR != "@ IN A 127.0.0.1" {
-		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r.RR)
-	}
+	assertRREquals(t, r.RR, "@ IN A 127.0.0.1")
 	if r.Comment != "example" {
 		t.Errorf("Expected comment to be 'example', got '%s'\n", r.Comment)
 	}
@@ -101,9 +100,7 @@ func TestReadRecord(t *testing.T) {
 	if r.Zone != "example.com." {
 		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r.Zone)
 	}
-	if r.RR != "@ IN A 127.0.0.1" {
-		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r.RR)
-	}
+	assertRREquals(t, r.RR, "@ IN A 127.0.0.1")
 	if r.Comment != "example" {
 		t.Errorf("Expected comment to be 'example', got '%s'\n", r.Comment)
 	}
@@ -193,9 +190,7 @@ func TestUpdateRecord(t *testing.T) {
 	if r.Zone != "example.com." {
 		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r.Zone)
 	}
-	if r.RR != "@ IN A 127.0.0.1" {
-		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r.RR)
-	}
+	assertRREquals(t, r.RR, "@ IN A 127.0.0.1")
 	if r.Comment != "example" {
 		t.Errorf("Expected comment to be 'example', got '%s'\n", r.Comment)
 	}
@@ -336,9 +331,7 @@ func TestDeleteRecord(t *testing.T) {
 	if r.Zone != "example.com." {
 		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r.Zone)
 	}
-	if r.RR != "@ IN A 127.0.0.1" {
-		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r.RR)
-	}
+	assertRREquals(t, r.RR, "@ IN A 127.0.0.1")
 	if r.Comment != "example" {
 		t.Errorf("Expected comment to be 'example', got '%s'\n", r.Comment)
 	}
@@ -426,9 +419,7 @@ func TestListRecords(t *testing.T) {
 	if r[0].Zone != "example.com." {
 		t.Errorf("Expected zone to be 'example.com.', got '%s'\n", r[0].Zone)
 	}
-	if r[0].RR != "@ IN A 127.0.0.1" {
-		t.Errorf("Expected RR to be '@ IN A 127.0.0.1', got '%s'\n", r[0].RR)
-	}
+	assertRREquals(t, r[0].RR, "@ IN A 127.0.0.1")
 	if r[0].Comment != "example" {
 		t.Errorf("Expected comment to be 'example', got '%s'\n", r[0].Comment)
 	}
@@ -584,5 +575,15 @@ func validateRequest(t *testing.T, r *http.Request) {
 	valid, errs := docValidator.ValidateHttpRequest(r)
 	if !valid {
 		t.Fatalf("Request failed OpenAPI spec validation: %v", errs)
+	}
+}
+
+func assertRREquals(t *testing.T, result dns.RR, expected string) {
+	expectedRR, err := dns.NewRR(expected)
+	if err != nil {
+		t.Errorf("Expected no error, got %v\n", err)
+	}
+	if result.String() != expectedRR.String() {
+		t.Errorf("Expected RR to be '%v', got '%v'\n", expectedRR, result)
 	}
 }

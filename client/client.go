@@ -13,6 +13,7 @@ import (
 
 	"git.houseofkummer.com/lior/home-dns/api/services/records"
 	"git.houseofkummer.com/lior/home-dns/api/services/rest"
+	"github.com/miekg/dns"
 )
 
 type HTTPClient interface {
@@ -50,7 +51,7 @@ func NewClient(options ClientOptions) Client {
 type Record struct {
 	ID        int
 	Zone      string
-	RR        string
+	RR        dns.RR
 	Comment   string
 	CreatedAt time.Time
 	UpdatedOn time.Time
@@ -242,10 +243,15 @@ func (c *Client) CreateRecord(params CreateRecordParams) (Record, error) {
 		return Record{}, err
 	}
 
+	rr, err := dns.NewRR(parsedRecord.Content)
+	if err != nil {
+		return Record{}, err
+	}
+
 	return Record{
 		ID:        parsedRecord.ID,
 		Zone:      parsedRecord.Zone,
-		RR:        parsedRecord.Content,
+		RR:        rr,
 		Comment:   parsedRecord.Comment,
 		CreatedAt: parsedRecord.CreatedAt,
 		UpdatedOn: parsedRecord.UpdatedOn,
@@ -289,10 +295,15 @@ func (c *Client) ReadRecord(id int) (Record, error) {
 		return Record{}, err
 	}
 
+	rr, err := dns.NewRR(parsedRecord.Content)
+	if err != nil {
+		return Record{}, err
+	}
+
 	return Record{
 		ID:        parsedRecord.ID,
 		Zone:      parsedRecord.Zone,
-		RR:        parsedRecord.Content,
+		RR:        rr,
 		Comment:   parsedRecord.Comment,
 		CreatedAt: parsedRecord.CreatedAt,
 		UpdatedOn: parsedRecord.UpdatedOn,
@@ -331,10 +342,15 @@ func (c *Client) UpdateRecord(params UpdateRecordParams) (Record, error) {
 		return Record{}, err
 	}
 
+	rr, err := dns.NewRR(parsedRecord.Content)
+	if err != nil {
+		return Record{}, err
+	}
+
 	return Record{
 		ID:        parsedRecord.ID,
 		Zone:      parsedRecord.Zone,
-		RR:        parsedRecord.Content,
+		RR:        rr,
 		Comment:   parsedRecord.Comment,
 		CreatedAt: parsedRecord.CreatedAt,
 		UpdatedOn: parsedRecord.UpdatedOn,
@@ -378,10 +394,15 @@ func (c *Client) DeleteRecord(id int) (Record, error) {
 		return Record{}, err
 	}
 
+	rr, err := dns.NewRR(parsedRecord.Content)
+	if err != nil {
+		return Record{}, err
+	}
+
 	return Record{
 		ID:        parsedRecord.ID,
 		Zone:      parsedRecord.Zone,
-		RR:        parsedRecord.Content,
+		RR:        rr,
 		Comment:   parsedRecord.Comment,
 		CreatedAt: parsedRecord.CreatedAt,
 		UpdatedOn: parsedRecord.UpdatedOn,
@@ -428,10 +449,14 @@ func (c *Client) ListRecords(zone string) ([]Record, error) {
 	records := make([]Record, len(parsedRecords))
 
 	for i, record := range parsedRecords {
+		rr, err := dns.NewRR(record.Content)
+		if err != nil {
+			return []Record{}, err
+		}
 		records[i] = Record{
 			ID:        record.ID,
 			Zone:      record.Zone,
-			RR:        record.Content,
+			RR:        rr,
 			Comment:   record.Comment,
 			CreatedAt: record.CreatedAt,
 			UpdatedOn: record.UpdatedOn,
