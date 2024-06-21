@@ -26,7 +26,15 @@ type ClientOptions struct {
 	Secret      string
 }
 
-type Client struct {
+type Client interface {
+	CreateRecord(params CreateRecordParams) (Record, error)
+	ReadRecord(id int) (Record, error)
+	UpdateRecord(params UpdateRecordParams) (Record, error)
+	DeleteRecord(id int) (Record, error)
+	ListRecords(zone string) ([]Record, error)
+}
+
+type APIClient struct {
 	httpClient  HTTPClient
 	endpoint    string
 	credentials Credentials
@@ -37,8 +45,8 @@ type Credentials struct {
 	ClientSecret string
 }
 
-func NewClient(options ClientOptions) Client {
-	return Client{
+func NewClient(options ClientOptions) APIClient {
+	return APIClient{
 		httpClient: &http.Client{},
 		endpoint:   options.APIEndpoint,
 		credentials: Credentials{
@@ -211,7 +219,7 @@ func parseErrorResponse(res *http.Response, params any) (error, error) {
 	}, nil
 }
 
-func (c *Client) CreateRecord(params CreateRecordParams) (Record, error) {
+func (c *APIClient) CreateRecord(params CreateRecordParams) (Record, error) {
 	req, err := paramsToRequest(
 		"POST",
 		fmt.Sprintf("%s/records", c.endpoint),
@@ -258,7 +266,7 @@ func (c *Client) CreateRecord(params CreateRecordParams) (Record, error) {
 	}, nil
 }
 
-func (c *Client) ReadRecord(id int) (Record, error) {
+func (c *APIClient) ReadRecord(id int) (Record, error) {
 	params := struct {
 		ID int
 	}{
@@ -310,7 +318,7 @@ func (c *Client) ReadRecord(id int) (Record, error) {
 	}, nil
 }
 
-func (c *Client) UpdateRecord(params UpdateRecordParams) (Record, error) {
+func (c *APIClient) UpdateRecord(params UpdateRecordParams) (Record, error) {
 	req, err := paramsToRequest(
 		"PUT",
 		fmt.Sprintf("%s/records/{{ .ID }}", c.endpoint),
@@ -357,7 +365,7 @@ func (c *Client) UpdateRecord(params UpdateRecordParams) (Record, error) {
 	}, nil
 }
 
-func (c *Client) DeleteRecord(id int) (Record, error) {
+func (c *APIClient) DeleteRecord(id int) (Record, error) {
 	params := struct {
 		ID int
 	}{
@@ -409,7 +417,7 @@ func (c *Client) DeleteRecord(id int) (Record, error) {
 	}, nil
 }
 
-func (c *Client) ListRecords(zone string) ([]Record, error) {
+func (c *APIClient) ListRecords(zone string) ([]Record, error) {
 	params := struct {
 		Zone string `param:"zone"`
 	}{

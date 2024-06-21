@@ -21,7 +21,7 @@ func TestCreateRecord(t *testing.T) {
 		Response: createRecordResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
 		Error:    nil,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -51,7 +51,7 @@ func TestCreateRecordUnauthorized(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.UnauthorizedError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -85,7 +85,7 @@ func TestReadRecord(t *testing.T) {
 		Response: createRecordResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
 		Error:    nil,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -111,7 +111,7 @@ func TestReadRecordNotFound(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.NotFoundError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -140,7 +140,7 @@ func TestReadRecordUnauthorized(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.UnauthorizedError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -170,7 +170,7 @@ func TestUpdateRecord(t *testing.T) {
 		Response: createRecordResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
 		Error:    nil,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -208,7 +208,7 @@ func TestUpdateRecordParamError(t *testing.T) {
 			},
 		},
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -247,7 +247,7 @@ func TestUpdateRecordNotFound(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.NotFoundError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -281,7 +281,7 @@ func TestUpdateRecordUnauthorized(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.UnauthorizedError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -316,7 +316,7 @@ func TestDeleteRecord(t *testing.T) {
 		Response: createRecordResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
 		Error:    nil,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -342,7 +342,7 @@ func TestDeleteRecordNotFound(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.NotFoundError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -371,7 +371,7 @@ func TestDeleteRecordUnauthorized(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.UnauthorizedError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -401,7 +401,7 @@ func TestListRecords(t *testing.T) {
 		Response: createRecordListResponse(t, 1, "example.com.", "@ IN A 127.0.0.1", "example"),
 		Error:    nil,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -437,7 +437,7 @@ func TestListRecordsParamError(t *testing.T) {
 			},
 		},
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
@@ -472,7 +472,7 @@ func TestListRecordsUnauthorized(t *testing.T) {
 	m := MockAPIErrorHTTPClient{
 		Error: &rest.UnauthorizedError,
 	}
-	c := Client{
+	c := APIClient{
 		httpClient: &m,
 		endpoint:   "https://localhost:3080/v1",
 		credentials: Credentials{
