@@ -65,7 +65,7 @@ func rrToTarget(rr dns.RR) string {
 		return v.Target
 	}
 	if v, ok := rr.(*dns.TXT); ok {
-		return v.Txt[0]
+		return strings.Join(v.Txt, "")
 	}
 	if v, ok := rr.(*dns.NS); ok {
 		return v.Ns

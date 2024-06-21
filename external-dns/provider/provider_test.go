@@ -228,3 +228,27 @@ func TestRecordsIgnoresUnsupportedTypes(t *testing.T) {
 	assert.Equal(t, "10.0.0.1", endpoints[0].Targets[0])
 	assert.Equal(t, "example.com", endpoints[0].DNSName)
 }
+
+func TestRecordsTXTRecordTarget(t *testing.T) {
+	state := []client.Record{
+		createTestRecord(t, 1, "example.com.", ". IN TXT \"Hello\nworld\tsome\rmore space\" no space between", ""),
+	}
+	p := newTestProvider(
+		t,
+		[]MockClientAction{
+			{
+				action: ListRecordAction{
+					Zone:            "example.com",
+					ResponseRecords: state,
+					ResponseErr:     nil,
+				},
+				stateAfter: state,
+			},
+		},
+	)
+	endpoints, err := p.Records(context.TODO())
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(endpoints), "endpoints length should be 2")
+	assert.Equal(t, 1, len(endpoints[0].Targets), "endpoints[0].Targets length should be 2")
+	assert.Equal(t, "Hello\nworld\tsome\rmore spacenospacebetween", endpoints[0].Targets[0])
+}
