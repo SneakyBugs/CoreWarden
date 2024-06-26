@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"git.houseofkummer.com/lior/home-dns/client"
@@ -47,8 +48,143 @@ func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	return groupByNameAndType(records), nil
 }
 
+func splitToZoneAndName(domain string, managedZones []string) (string, string, error) {
+	for _, zone := range managedZones {
+		zoneLabelCount := dns.CountLabel(zone)
+		commonLabels := dns.CompareDomainName(domain, zone)
+		if commonLabels == zoneLabelCount {
+			if dns.CountLabel(domain) == zoneLabelCount {
+				return zone, ".", nil
+			}
+			labels := dns.SplitDomainName(domain)
+			return zone, strings.Join(labels[:commonLabels], "."), nil
+		}
+	}
+	return "", "", fmt.Errorf("Domains being split must be subdomains of zones in managedZones")
+}
+
 func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
+	errors := []error{}
+	for _, endpoint := range changes.Create {
+		for _, target := range endpoint.Targets {
+			// Here the error occurs.
+			rr, zone, err := endpointToRR(p.zones, *endpoint, target)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+			_, err = p.client.CreateRecord(client.CreateRecordParams{
+				Zone:    zone,
+				RR:      rr.String(),
+				Comment: "",
+			})
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+		}
+	}
+	if len(changes.UpdateNew) == 0 {
+		// No more updates to perform, avoid listing records.
+		if 0 < len(errors) {
+			return fmt.Errorf("Encountered %d recoverable errors", len(errors))
+		}
+		return nil
+	}
+	existingRecords := []client.Record{}
+	for _, zone := range p.zones {
+		zoneRecords, err := p.client.ListRecords(zone)
+		if err != nil {
+			return err
+		}
+		existingRecords = append(existingRecords, zoneRecords...)
+	}
+	for i, desired := range changes.UpdateNew {
+		current := changes.UpdateOld[i]
+		add, remove, leave := provider.Difference(current.Targets, desired.Targets)
+		for _, target := range remove {
+			record, err := findRecord(p.zones, existingRecords, *current, target)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+			_, err = p.client.DeleteRecord(record.ID)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+		}
+		for _, target := range add {
+			rr, zone, err := endpointToRR(p.zones, *desired, target)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+			_, err = p.client.CreateRecord(client.CreateRecordParams{
+				Zone:    zone,
+				RR:      rr.String(),
+				Comment: "",
+			})
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+		}
+		for _, target := range leave {
+			record, err := findRecord(p.zones, existingRecords, *current, target)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+			rr, _, err := endpointToRR(p.zones, *desired, target)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+			if record.RR.String() == rr.String() {
+				// Record does not need to be updated.
+				continue
+			}
+			_, err = p.client.UpdateRecord(client.UpdateRecordParams{
+				ID:      record.ID,
+				Zone:    record.Zone,
+				RR:      rr.String(),
+				Comment: record.Comment,
+			})
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+
+		}
+	}
+	if 0 < len(errors) {
+		return fmt.Errorf("Encountered %d recoverable errors", len(errors))
+	}
 	return nil
+}
+
+func endpointToRR(zones []string, e endpoint.Endpoint, target string) (dns.RR, string, error) {
+	zone, name, err := splitToZoneAndName(dns.Fqdn(e.DNSName), zones)
+	if err != nil {
+		return nil, "", err
+	}
+	content := fmt.Sprintf("%s %d IN %s %s", name, e.RecordTTL, e.RecordType, target)
+	rr, err := dns.NewRR(content)
+	return rr, zone, err
+}
+
+func findRecord(zones []string, records []client.Record, e endpoint.Endpoint, target string) (client.Record, error) {
+	targetRR, zone, err := endpointToRR(zones, e, target)
+	if err != nil {
+		return client.Record{}, err
+	}
+	for _, r := range records {
+		if r.RR.String() == targetRR.String() && r.Zone == zone {
+			return r, nil
+		}
+	}
+	return client.Record{}, fmt.Errorf("record not found")
 }
 
 func rrToTarget(rr dns.RR) string {
