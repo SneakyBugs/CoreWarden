@@ -27,7 +27,7 @@ type Configuration struct {
 	Zones string `env:"CLIENT_ZONES"`
 }
 
-func NewProvider(domainFilter endpoint.DomainFilter, config *Configuration) (eprovider.Provider, error) {
+func NewProvider(config *Configuration) (eprovider.Provider, error) {
 	c := client.NewClient(client.ClientOptions{
 		APIEndpoint: config.APIEndpoint,
 		ID:          config.ID,

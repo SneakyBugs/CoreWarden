@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook
+  namespace: external-dns
+data:
+  apiEndpoint: http://api.default:6970/v1
+  zones: example.com.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-credentials
+  namespace: external-dns
+stringData:
+  id: alice
+  secret: debug

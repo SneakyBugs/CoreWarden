@@ -1,0 +1,37 @@
+provider:
+  name: webhook
+  webhook:
+    image:
+      repository: externaldns-webhook
+      tag: latest
+    env:
+      - name: WEBHOOK_API_ENDPOINT
+        valueFrom:
+          configMapKeyRef:
+            name: webhook
+            key: apiEndpoint
+      - name: WEBHOOK_API_ID
+        valueFrom:
+          secretKeyRef:
+            name: webhook-credentials
+            key: id
+      - name: WEBHOOK_API_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: webhook-credentials
+            key: secret
+      - name: WEBHOOK_ZONES
+        valueFrom:
+          configMapKeyRef:
+            name: webhook
+            key: zones
+    # TODO
+    # resources:
+    livenessProbe:
+      httpGet:
+        path: /-/liveness
+    readinessProbe:
+      httpGet:
+        path: /-/readiness
+    # TODO
+    # serviceMonitor:

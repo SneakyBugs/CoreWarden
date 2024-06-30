@@ -42,3 +42,16 @@ func TestCasbinEnforcerSubdomain(t *testing.T) {
 		t.Fatalf("expected bob to be authorized")
 	}
 }
+
+func TestCasbinEnforcerGroup(t *testing.T) {
+	e := NewCasbinEnforcer(CasbinEnforcerOptions{
+		PolicyFile: "test_policy.csv",
+	})
+	authorized, err := e.Enforce("alice", "records", "example.com.", ReadAction)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !authorized {
+		t.Fatalf("expected bob to be authorized")
+	}
+}

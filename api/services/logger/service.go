@@ -4,7 +4,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 )
 
 type Options struct {
@@ -21,6 +20,6 @@ func NewFxLogger(logger *zap.Logger) fxevent.Logger {
 	}
 }
 
-func Register(logger *zap.Logger, r *chi.Mux, g *grpc.Server) {
+func Register(logger *zap.Logger, r *chi.Mux) {
 	r.Use(requestLogger(logger))
 }

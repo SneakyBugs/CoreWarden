@@ -117,12 +117,10 @@ func CreateRootCommand() Command {
 		cfg.AutomaticEnv()
 
 		if err := cfg.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				fmt.Println("no config found")
-				return
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+				fmt.Println(err)
+				os.Exit(1)
 			}
-			fmt.Println(err)
-			os.Exit(1)
 		}
 
 		missingOptions := []string{}

@@ -5,9 +5,11 @@ WORKDIR /build
 
 COPY go.mod go.sum ./
 COPY api api
-RUN cd api && go build .
+COPY client client
+COPY external-dns external-dns
+RUN cd external-dns && go build .
 
 FROM gcr.io/distroless/base-debian12:nonroot
 
-COPY --from=build /build/api /
-ENTRYPOINT ["/api"]
+COPY --from=build /build/external-dns/external-dns /webhook
+ENTRYPOINT ["/webhook"]
