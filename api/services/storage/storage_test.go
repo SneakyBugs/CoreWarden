@@ -15,13 +15,21 @@ import (
 	"go.uber.org/fx"
 )
 
+func toRRString(t *testing.T, rr string) string {
+	parsedRR, err := dns.NewRR(rr)
+	if err != nil {
+		t.Fatalf("Expected error to be nil, got %v\n", err)
+	}
+	return parsedRR.String()
+}
+
 func TestCreateRecord(t *testing.T) {
 	s, closer := createTestStorage()
 	ctx := context.Background()
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -35,7 +43,7 @@ func TestReadRecord(t *testing.T) {
 	defer closer(ctx)
 	createResult, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -48,7 +56,7 @@ func TestReadRecord(t *testing.T) {
 	if readResult.Zone != "example.com." {
 		t.Fatalf("expected zone to be 'example.com.', got '%s'", readResult.Zone)
 	}
-	expectedRR := "foo 3600 IN A 127.0.0.1"
+	expectedRR := toRRString(t, "foo 3600 IN A 127.0.0.1")
 	if readResult.RR != expectedRR {
 		t.Fatalf("expected RR to be '%s', got '%s'", expectedRR, readResult.RR)
 	}
@@ -73,7 +81,7 @@ func TestUpdateRecord(t *testing.T) {
 	defer closer(ctx)
 	createResult, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -107,7 +115,7 @@ func TestUpdateRecordNotFound(t *testing.T) {
 	_, err := s.UpdateRecord(ctx, RecordUpdateParameters{
 		ID:      1337,
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if !errors.Is(err, RecordNotFoundError) {
@@ -121,7 +129,7 @@ func TestDeleteRecord(t *testing.T) {
 	defer closer(ctx)
 	createResult, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -134,7 +142,7 @@ func TestDeleteRecord(t *testing.T) {
 	if deleteResult.Zone != "example.com." {
 		t.Fatalf("expected zone to be 'example.com.', got '%s'", deleteResult.Zone)
 	}
-	expectedRR := "foo 3600 IN A 127.0.0.1"
+	expectedRR := toRRString(t, "foo 3600 IN A 127.0.0.1")
 	if deleteResult.RR != expectedRR {
 		t.Fatalf("expected RR to be '%s', got '%s'", expectedRR, deleteResult.RR)
 	}
@@ -163,7 +171,7 @@ func TestListRecords(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -171,7 +179,7 @@ func TestListRecords(t *testing.T) {
 	}
 	_, err = s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "bar 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "bar 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -179,7 +187,7 @@ func TestListRecords(t *testing.T) {
 	}
 	_, err = s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "foo.com.",
-		RR:      "@ 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "@ 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -214,7 +222,7 @@ func TestResolveRecord(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -242,7 +250,7 @@ func TestResolveRecordQtype(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -250,7 +258,7 @@ func TestResolveRecordQtype(t *testing.T) {
 	}
 	_, err = s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo 3600 IN CNAME foo.example.com",
+		RR:      toRRString(t, "foo 3600 IN CNAME foo.example.com"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -278,7 +286,7 @@ func TestResolveRecordAt(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "@ 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "@ 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -306,7 +314,7 @@ func TestResolveSubdomain(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo.bar.baz 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "foo.bar.baz 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -328,13 +336,41 @@ func TestResolveSubdomain(t *testing.T) {
 	}
 }
 
+func TestResolveSubdomainWithDash(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "foo-bar 3600 IN A 127.0.0.1"),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo-bar.example.com.",
+		Qtype: dns.TypeA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	if len(res.Answer) != 1 {
+		t.Fatalf("expected answer length 1, got %d\n", len(res.Answer))
+	}
+	expectedAnswer := "foo-bar.example.com.\t3600\tIN\tA\t127.0.0.1"
+	if res.Answer[0] != expectedAnswer {
+		t.Fatalf("expected answer to be '%s', got '%s'", expectedAnswer, res.Answer[0])
+	}
+}
+
 func TestResolveWildcard(t *testing.T) {
 	s, closer := createTestStorage()
 	ctx := context.Background()
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "*.wildcard 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "*.wildcard 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -362,7 +398,7 @@ func TestResolveWildcardPrecedence(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "*.wildcard 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "*.wildcard 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -370,7 +406,7 @@ func TestResolveWildcardPrecedence(t *testing.T) {
 	}
 	_, err = s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "*.bar.wildcard 3600 IN A 0.0.0.0",
+		RR:      toRRString(t, "*.bar.wildcard 3600 IN A 0.0.0.0"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -398,7 +434,7 @@ func TestResolvePrecedenceOverWildcard(t *testing.T) {
 	defer closer(ctx)
 	_, err := s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "*.wildcard 3600 IN A 127.0.0.1",
+		RR:      toRRString(t, "*.wildcard 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
 	if err != nil {
@@ -406,7 +442,7 @@ func TestResolvePrecedenceOverWildcard(t *testing.T) {
 	}
 	_, err = s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      "foo.bar.wildcard 3600 IN A 0.0.0.0",
+		RR:      toRRString(t, "foo.bar.wildcard 3600 IN A 0.0.0.0"),
 		Comment: "test",
 	})
 	if err != nil {

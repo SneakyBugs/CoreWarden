@@ -50,6 +50,7 @@ func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 
 func splitToZoneAndName(domain string, managedZones []string) (string, string, error) {
 	for _, zone := range managedZones {
+		fmt.Printf("domain: %s, zone: %s\n", domain, zone)
 		zoneLabelCount := dns.CountLabel(zone)
 		commonLabels := dns.CompareDomainName(domain, zone)
 		if commonLabels == zoneLabelCount {
@@ -57,7 +58,8 @@ func splitToZoneAndName(domain string, managedZones []string) (string, string, e
 				return zone, ".", nil
 			}
 			labels := dns.SplitDomainName(domain)
-			return zone, strings.Join(labels[:commonLabels], "."), nil
+			fmt.Printf("zone: %s, name: %s, common labels: %d, domain labels: %d\n", zone, strings.Join(labels[:commonLabels], "."), commonLabels, len(labels))
+			return zone, strings.Join(labels[:len(labels)-commonLabels], "."), nil
 		}
 	}
 	return "", "", fmt.Errorf("Domains being split must be subdomains of zones in managedZones")
@@ -66,7 +68,9 @@ func splitToZoneAndName(domain string, managedZones []string) (string, string, e
 func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	errors := []error{}
 	for _, endpoint := range changes.Create {
+		fmt.Printf("dns name: %s, record type: %s\n", endpoint.DNSName, endpoint.RecordType)
 		for _, target := range endpoint.Targets {
+			fmt.Printf("dns name: %s, record type: %s, target: %s\n", endpoint.DNSName, endpoint.RecordType, target)
 			// Here the error occurs.
 			rr, zone, err := endpointToRR(p.zones, *endpoint, target)
 			if err != nil {

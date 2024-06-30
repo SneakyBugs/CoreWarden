@@ -289,6 +289,44 @@ func TestNewARecordsSubdomain(t *testing.T) {
 	assertActions(t, endpoints, actions, []string{endpoint.RecordTypeA, endpoint.RecordTypeCNAME})
 }
 
+func TestNewARecordsSingleSubdomain(t *testing.T) {
+	endpoints := []*endpoint.Endpoint{
+		{
+			RecordType: "A",
+			DNSName:    "my-app.example.com",
+			Targets:    endpoint.Targets{"10.0.0.1", "10.0.0.2"},
+		},
+	}
+	actions := []MockClientAction{
+		{
+			action: ListRecordAction{
+				Zone:            "example.com.",
+				ResponseRecords: []client.Record{},
+				ResponseErr:     nil,
+			},
+		},
+		{
+			action: CreateRecordAction{
+				Zone:           "example.com.",
+				RR:             "my-app.\t0\tIN\tA\t10.0.0.1",
+				Comment:        "",
+				ResponseRecord: createTestRecord(t, 1, "my-app.example.com.", "my-app. 0 IN A 10.0.0.1", ""),
+				ResponseErr:    nil,
+			},
+		},
+		{
+			action: CreateRecordAction{
+				Zone:           "example.com.",
+				RR:             "my-app.\t0\tIN\tA\t10.0.0.2",
+				Comment:        "",
+				ResponseRecord: createTestRecord(t, 2, "my-app.example.com.", "my-app. 0 IN A 10.0.0.2", ""),
+				ResponseErr:    nil,
+			},
+		},
+	}
+	assertActions(t, endpoints, actions, []string{endpoint.RecordTypeA, endpoint.RecordTypeCNAME})
+}
+
 func TestNewTargetInExistingARecord(t *testing.T) {
 	endpoints := []*endpoint.Endpoint{
 		{
