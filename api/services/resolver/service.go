@@ -7,6 +7,8 @@ import (
 	"git.houseofkummer.com/lior/home-dns/api/services/storage"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type service struct {
@@ -28,6 +30,11 @@ func (s *service) Resolve(ctx context.Context, q *resolver.Question) (*resolver.
 		Qtype: uint16(q.Qtype),
 	})
 	if err != nil {
+		if status.Convert(err).Code() == codes.NotFound {
+			// Avoid logging records not found as errors.
+			s.logger.Info("DNS request", zap.String("name", q.Name), zap.Bool("found", false))
+			return nil, err
+		}
 		s.logger.Error(
 			"DNS request error",
 			zap.Error(err),
@@ -37,6 +44,7 @@ func (s *service) Resolve(ctx context.Context, q *resolver.Question) (*resolver.
 	s.logger.Info(
 		"DNS request",
 		zap.String("name", q.Name),
+		zap.Bool("found", true),
 	)
 	return &resolver.Response{
 		Answer: resp.Answer,
