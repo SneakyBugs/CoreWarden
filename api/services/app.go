@@ -66,6 +66,7 @@ func NewApp(options Options) *fx.App {
 			auth.NewService,
 		),
 		fx.Invoke(
+			logger.Register,
 			telemetry.Register,
 			resolver.Register,
 			records.Register,
