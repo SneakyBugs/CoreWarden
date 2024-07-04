@@ -30,9 +30,11 @@ func TestInjector(t *testing.T) {
 			Err: nil,
 		},
 	})
+	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
 		client: &r,
 		logger: zap.NewNop(),
+		next:   &h,
 	}
 
 	req := new(dns.Msg)
@@ -65,6 +67,7 @@ func TestInjector(t *testing.T) {
 		t.Errorf("Expected extra length to be 0, got %d\n", len(rec.Msg.Extra))
 	}
 	r.AssertDone()
+	h.AssertDone()
 }
 
 func TestForwardWhenNotFound(t *testing.T) {
@@ -81,25 +84,32 @@ func TestForwardWhenNotFound(t *testing.T) {
 			),
 		},
 	})
+	req := new(dns.Msg)
+	req.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
+	h := NewMockHandler(t, []MockHandlerAction{
+		{
+			In:    *req,
+			Out:   *new(dns.Msg),
+			Rcode: 2,
+			Err:   nil,
+		},
+	})
 	i := Injector{
 		client: &r,
 		logger: zap.NewNop(),
+		next:   &h,
 	}
 
-	req := new(dns.Msg)
-	req.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
 	rec := dnstest.NewRecorder(&test.ResponseWriter{})
 	code, err := i.ServeDNS(context.Background(), rec, req)
 	if code != dns.RcodeServerFailure {
 		t.Errorf("Expected rcode %d, got %d\n", dns.RcodeServerFailure, code)
 	}
-	if err == nil {
-		t.Fatalf("Expected an error\n")
-	}
-	if !strings.Contains(err.Error(), "no next plugin found") {
-		t.Fatalf("Expected error string to contain 'no next plugin found'")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
 	}
 	r.AssertDone()
+	h.AssertDone()
 }
 
 func TestUnknownError(t *testing.T) {
@@ -116,9 +126,11 @@ func TestUnknownError(t *testing.T) {
 			),
 		},
 	})
+	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
 		client: &r,
 		logger: zap.NewNop(),
+		next:   &h,
 	}
 
 	req := new(dns.Msg)
@@ -135,6 +147,7 @@ func TestUnknownError(t *testing.T) {
 		t.Fatalf("Expected error string to not contain 'some error'")
 	}
 	r.AssertDone()
+	h.AssertDone()
 }
 
 func TestInvalidAnswerRR(t *testing.T) {
@@ -152,9 +165,11 @@ func TestInvalidAnswerRR(t *testing.T) {
 			Err: nil,
 		},
 	})
+	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
 		client: &r,
 		logger: zap.NewNop(),
+		next:   &h,
 	}
 
 	req := new(dns.Msg)
@@ -168,6 +183,7 @@ func TestInvalidAnswerRR(t *testing.T) {
 		t.Fatalf("Expected an error\n")
 	}
 	r.AssertDone()
+	h.AssertDone()
 }
 
 func TestInvalidNsRR(t *testing.T) {
@@ -185,9 +201,11 @@ func TestInvalidNsRR(t *testing.T) {
 			Err: nil,
 		},
 	})
+	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
 		client: &r,
 		logger: zap.NewNop(),
+		next:   &h,
 	}
 
 	req := new(dns.Msg)
@@ -218,9 +236,11 @@ func TestInvalidExtraRR(t *testing.T) {
 			Err: nil,
 		},
 	})
+	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
 		client: &r,
 		logger: zap.NewNop(),
+		next:   &h,
 	}
 
 	req := new(dns.Msg)
@@ -234,6 +254,69 @@ func TestInvalidExtraRR(t *testing.T) {
 		t.Fatalf("Expected an error\n")
 	}
 	r.AssertDone()
+	h.AssertDone()
+}
+
+type MockHandlerAction struct {
+	In    dns.Msg
+	Out   dns.Msg
+	Rcode int
+	Err   error
+}
+
+type MockHandler struct {
+	actions      []MockHandlerAction
+	currentIndex int
+	t            *testing.T
+}
+
+func (h *MockHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, m *dns.Msg) (int, error) {
+	if len(h.actions) <= h.currentIndex {
+		h.t.Fatalf("Client called Resolve when no more method calls were expected\n")
+	}
+	current := h.actions[h.currentIndex]
+
+	if len(m.Question) != len(current.In.Question) {
+		h.t.Fatalf("Expected question section length to be %d, got %d", len(current.In.Question), len(m.Question))
+	}
+	for i, expected := range current.In.Question {
+		result := m.Question[i]
+		if expected.Name != result.Name {
+			h.t.Fatalf("Expected question %d Name to be '%s', got '%s'\n", i, expected.Name, result.Name)
+		}
+		if expected.Qtype != result.Qtype {
+			h.t.Fatalf("Expected question %d Qtype to be %d, got %d\n", i, expected.Qtype, result.Qtype)
+		}
+		if expected.Qclass != result.Qclass {
+			h.t.Fatalf("Expected question %d Qclass to be %d, got %d\n", i, expected.Qclass, result.Qclass)
+		}
+	}
+
+	err := w.WriteMsg(&current.Out)
+	if err != nil {
+		h.t.Fatalf("Expected dns.Msg to write without error, got %v\n", err)
+	}
+	h.currentIndex++
+	return current.Rcode, current.Err
+
+}
+
+func (h *MockHandler) Name() string {
+	return "mock"
+}
+
+func (h *MockHandler) AssertDone() {
+	if h.currentIndex != len(h.actions) {
+		h.t.Fatalf("Expected client to call all mock actions, called %d out of %d method calls\n", h.currentIndex, len(h.actions))
+	}
+}
+
+func NewMockHandler(t *testing.T, actions []MockHandlerAction) MockHandler {
+	return MockHandler{
+		actions:      actions,
+		currentIndex: 0,
+		t:            t,
+	}
 }
 
 type MockResolver struct {
