@@ -16,15 +16,22 @@ import (
 )
 
 func TestInjector(t *testing.T) {
-	i := Injector{
-		client: &mockResolver{
-			result: &resolver.Response{
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
 				Answer: []string{"example.com. IN A 127.0.0.1"},
 				Ns:     []string{},
 				Extra:  []string{},
 			},
-			err: nil,
+			Err: nil,
 		},
+	})
+	i := Injector{
+		client: &r,
 		logger: zap.NewNop(),
 	}
 
@@ -57,21 +64,25 @@ func TestInjector(t *testing.T) {
 	if len(rec.Msg.Extra) != 0 {
 		t.Errorf("Expected extra length to be 0, got %d\n", len(rec.Msg.Extra))
 	}
+	r.AssertDone()
 }
 
 func TestForwardWhenNotFound(t *testing.T) {
-	i := Injector{
-		client: &mockResolver{
-			result: &resolver.Response{
-				Answer: []string{},
-				Ns:     []string{},
-				Extra:  []string{},
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
 			},
-			err: status.Error(
+			Result: &resolver.Response{},
+			Err: status.Error(
 				codes.NotFound,
 				"record not found",
 			),
 		},
+	})
+	i := Injector{
+		client: &r,
 		logger: zap.NewNop(),
 	}
 
@@ -88,21 +99,25 @@ func TestForwardWhenNotFound(t *testing.T) {
 	if !strings.Contains(err.Error(), "no next plugin found") {
 		t.Fatalf("Expected error string to contain 'no next plugin found'")
 	}
+	r.AssertDone()
 }
 
 func TestUnknownError(t *testing.T) {
-	i := Injector{
-		client: &mockResolver{
-			result: &resolver.Response{
-				Answer: []string{},
-				Ns:     []string{},
-				Extra:  []string{},
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
 			},
-			err: status.Error(
+			Result: &resolver.Response{},
+			Err: status.Error(
 				codes.Unknown,
 				"some error",
 			),
 		},
+	})
+	i := Injector{
+		client: &r,
 		logger: zap.NewNop(),
 	}
 
@@ -119,18 +134,26 @@ func TestUnknownError(t *testing.T) {
 	if !strings.Contains(err.Error(), "some error") {
 		t.Fatalf("Expected error string to not contain 'some error'")
 	}
+	r.AssertDone()
 }
 
 func TestInvalidAnswerRR(t *testing.T) {
-	i := Injector{
-		client: &mockResolver{
-			result: &resolver.Response{
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
 				Answer: []string{"example.com. IN A 127.0.0"},
 				Ns:     []string{},
 				Extra:  []string{},
 			},
-			err: nil,
+			Err: nil,
 		},
+	})
+	i := Injector{
+		client: &r,
 		logger: zap.NewNop(),
 	}
 
@@ -144,18 +167,26 @@ func TestInvalidAnswerRR(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected an error\n")
 	}
+	r.AssertDone()
 }
 
 func TestInvalidNsRR(t *testing.T) {
-	i := Injector{
-		client: &mockResolver{
-			result: &resolver.Response{
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
 				Answer: []string{},
 				Ns:     []string{"example.com. IN A 127.0.0"},
 				Extra:  []string{},
 			},
-			err: nil,
+			Err: nil,
 		},
+	})
+	i := Injector{
+		client: &r,
 		logger: zap.NewNop(),
 	}
 
@@ -169,18 +200,26 @@ func TestInvalidNsRR(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected an error\n")
 	}
+	r.AssertDone()
 }
 
 func TestInvalidExtraRR(t *testing.T) {
-	i := Injector{
-		client: &mockResolver{
-			result: &resolver.Response{
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
 				Answer: []string{},
 				Ns:     []string{},
 				Extra:  []string{"example.com. IN A 127.0.0"},
 			},
-			err: nil,
+			Err: nil,
 		},
+	})
+	i := Injector{
+		client: &r,
 		logger: zap.NewNop(),
 	}
 
@@ -194,14 +233,48 @@ func TestInvalidExtraRR(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected an error\n")
 	}
+	r.AssertDone()
 }
 
-type mockResolver struct {
-	result *resolver.Response
-	err    error
+type MockResolver struct {
 	resolver.ResolverServer
+	actions      []MockResolverAction
+	t            *testing.T
+	currentIndex int
 }
 
-func (r *mockResolver) Resolve(ctx context.Context, in *resolver.Question, opts ...grpc.CallOption) (*resolver.Response, error) {
-	return r.result, r.err
+func NewMockResolver(t *testing.T, actions []MockResolverAction) MockResolver {
+	return MockResolver{
+		actions:      actions,
+		currentIndex: 0,
+		t:            t,
+	}
+}
+
+type MockResolverAction struct {
+	In     *resolver.Question
+	Result *resolver.Response
+	Err    error
+}
+
+func (r *MockResolver) Resolve(ctx context.Context, in *resolver.Question, opts ...grpc.CallOption) (*resolver.Response, error) {
+	if len(r.actions) <= r.currentIndex {
+		r.t.Fatalf("Client called Resolve when no more method calls were expected\n")
+	}
+	current := r.currentIndex
+	currentIn := r.actions[current].In
+	if currentIn.Name != in.Name {
+		r.t.Fatalf("Expected in.Name to be '%s', got '%s'\n", currentIn.Name, in.Name)
+	}
+	if currentIn.Qtype != in.Qtype {
+		r.t.Fatalf("Expected in.Qtype to be %d, got %d\n", currentIn.Qtype, in.Qtype)
+	}
+	r.currentIndex++
+	return r.actions[current].Result, r.actions[current].Err
+}
+
+func (r *MockResolver) AssertDone() {
+	if r.currentIndex != len(r.actions) {
+		r.t.Fatalf("Expected client to call all mock actions, called %d out of %d method calls\n", r.currentIndex, len(r.actions))
+	}
 }
