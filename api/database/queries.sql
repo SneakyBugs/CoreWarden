@@ -4,6 +4,12 @@ INSERT INTO Records
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
+-- name: AnyRecordsExistAtNode :one
+SELECT EXISTS(
+				SELECT 1 FROM Records
+				WHERE zone = $1 and name = $2
+);
+
 -- name: ReadRecord :one
 SELECT * FROM Records
 WHERE id = $1;

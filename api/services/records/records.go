@@ -48,6 +48,18 @@ func (s service) HandleCreate() http.HandlerFunc {
 			Comment: data.Comment,
 		})
 		if err != nil {
+			if errors.Is(err, storage.CNAMEArgumentError) {
+				s.logger.Error("failed to create CNAME record because data exists in node", zap.String("zone", data.Zone), zap.String("rr", data.RR.String()))
+				rest.RenderError(w, r, &rest.BadRequestErrorResponse{
+					Fields: []rest.KeyError{
+						{
+							Key:     "content",
+							Message: "CNAME record must be the only record in the node",
+						},
+					},
+				})
+				return
+			}
 			s.logger.Error("failed to create record", zap.Error(err))
 			rest.RenderError(w, r, &rest.InternalServerError)
 			return

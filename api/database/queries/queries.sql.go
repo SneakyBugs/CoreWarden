@@ -9,6 +9,25 @@ import (
 	"context"
 )
 
+const anyRecordsExistAtNode = `-- name: AnyRecordsExistAtNode :one
+SELECT EXISTS(
+				SELECT 1 FROM Records
+				WHERE zone = $1 and name = $2
+)
+`
+
+type AnyRecordsExistAtNodeParams struct {
+	Zone string
+	Name string
+}
+
+func (q *Queries) AnyRecordsExistAtNode(ctx context.Context, arg AnyRecordsExistAtNodeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, anyRecordsExistAtNode, arg.Zone, arg.Name)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createRecord = `-- name: CreateRecord :one
 INSERT INTO Records
 (zone, content, name, is_wildcard, type, comment)

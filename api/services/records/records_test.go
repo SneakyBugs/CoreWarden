@@ -50,6 +50,36 @@ func TestCreateRecord(t *testing.T) {
 	}
 }
 
+func TestCreateRecordCNAMEExistingData(t *testing.T) {
+	h := createTestHandler(storage.CNAMEArgumentError)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ CNAME example.net.", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Result().StatusCode)
+	}
+	var response rest.BadRequestErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(response.Fields) != 1 {
+		t.Fatalf("Expected fields to of length 1, got %d", len(response.Fields))
+	}
+	if response.Fields[0].Key != "content" {
+		t.Errorf("Expected fields[0].key to be 'content', got '%s'", response.Fields[0].Key)
+	}
+	if response.Fields[0].Message != "CNAME record must be the only record in the node" {
+		t.Errorf("Expected fields[0].message to be 'CNAME record must be the only record in the node', got '%s'", response.Fields[0].Message)
+	}
+}
+
 func TestCreateRecordMissingZone(t *testing.T) {
 	h := createTestHandler(nil)
 	w := httptest.NewRecorder()
@@ -799,6 +829,7 @@ func createTestHandler(returnError error) http.Handler {
 		fx.Populate(
 			&handler,
 		),
+		fx.NopLogger,
 	)
 	return handler
 }

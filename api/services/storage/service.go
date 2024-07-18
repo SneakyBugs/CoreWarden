@@ -45,7 +45,7 @@ func NewService(lc fx.Lifecycle, options Options, rc *health.ReadinessChecks) (S
 	rc.Add(&readinessCheck{
 		db: db,
 	})
-	return &PostgresStorage{queries: queries.New(pool)}, nil
+	return &PostgresStorage{queries: queries.New(pool), pool: pool}, nil
 }
 
 type readinessCheck struct {

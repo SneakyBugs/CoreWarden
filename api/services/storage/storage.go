@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"git.houseofkummer.com/lior/home-dns/api/database/queries"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/miekg/dns"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -24,6 +25,7 @@ type Storage interface {
 
 var RecordNotFoundError = errors.New("record not found")
 var ServerError = errors.New("server error")
+var CNAMEArgumentError = errors.New("CNAME must be the only record at a node")
 
 var ResolveServerError = status.Error(
 	codes.Internal,
@@ -35,6 +37,7 @@ var ResolveRecordNotFoundError = status.Error(
 )
 
 type PostgresStorage struct {
+	pool    *pgxpool.Pool
 	queries *queries.Queries
 }
 
@@ -132,6 +135,27 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 		isWildcard = true
 	}
 
+	// RFC 1034 section 3.6.2: "If a CNAME RR is present at a node, no other data should be present"
+	tx, err := s.pool.Begin(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+	if err != nil {
+		return Record{}, err
+	}
+	if _, ok := rr.(*dns.CNAME); ok {
+		anyExist, err := s.queries.AnyRecordsExistAtNode(ctx, queries.AnyRecordsExistAtNodeParams{
+			Zone: zoneFqdn,
+			Name: fullName,
+		})
+		if err != nil {
+			return Record{}, err
+		}
+		if anyExist {
+			return Record{}, CNAMEArgumentError
+		}
+	}
+
 	r, err := s.queries.CreateRecord(ctx, queries.CreateRecordParams{
 		Zone:       zoneFqdn,
 		Content:    p.RR,
@@ -150,7 +174,7 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 		Comment:    r.Comment,
 		CreatedAt:  r.CreatedAt.Time,
 		ModifiedOn: r.ModifiedOn.Time,
-	}, nil
+	}, tx.Commit(ctx)
 }
 func (s *PostgresStorage) ReadRecord(ctx context.Context, id int) (Record, error) {
 	r, err := s.queries.ReadRecord(ctx, int32(id))
