@@ -257,6 +257,167 @@ func TestInvalidExtraRR(t *testing.T) {
 	h.AssertDone()
 }
 
+func TestCnameTargetingInjector(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
+				Answer: []string{"example.com. IN CNAME example.net."},
+				Ns:     []string{},
+				Extra:  []string{},
+			},
+			Err: nil,
+		},
+		{
+			In: &resolver.Question{
+				Name:  "example.net.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
+				Answer: []string{"example.net. IN A 127.0.0.1"},
+				Ns:     []string{},
+				Extra:  []string{},
+			},
+			Err: nil,
+		},
+	})
+	h := NewMockHandler(t, []MockHandlerAction{})
+	i := Injector{
+		client: &r,
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	req := new(dns.Msg)
+	req.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	code, err := i.ServeDNS(context.Background(), rec, req)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if code != dns.RcodeSuccess {
+		t.Errorf("Expected rcode %d, got %d\n", dns.RcodeSuccess, code)
+	}
+	if rec.Msg == nil {
+		t.Fatalf("Expected message to not be nil\n")
+	}
+	if len(rec.Msg.Answer) != 2 {
+		t.Fatalf("Expected answer length to be 2, got %d\n", len(rec.Msg.Answer))
+	}
+	expectedAnswer, err := dns.NewRR("example.com. IN CNAME example.net.")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if rec.Msg.Answer[0].String() != expectedAnswer.String() {
+		t.Fatalf("Expected answer to be '%s', got '%s'\n", expectedAnswer, rec.Msg.Answer[0])
+	}
+	expectedAnswer, err = dns.NewRR("example.net. IN A 127.0.0.1")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if rec.Msg.Answer[1].String() != expectedAnswer.String() {
+		t.Fatalf("Expected answer to be '%s', got '%s'\n", expectedAnswer, rec.Msg.Answer[1])
+	}
+	if len(rec.Msg.Ns) != 0 {
+		t.Errorf("Expected ns length to be 0, got %d\n", len(rec.Msg.Ns))
+	}
+	if len(rec.Msg.Extra) != 0 {
+		t.Errorf("Expected extra length to be 0, got %d\n", len(rec.Msg.Extra))
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
+func TestCnameTargetingUpstream(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
+				Answer: []string{"example.com. IN CNAME example.net."},
+				Ns:     []string{},
+				Extra:  []string{},
+			},
+			Err: nil,
+		},
+		{
+			In: &resolver.Question{
+				Name:  "example.net.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
+				Answer: []string{},
+				Ns:     []string{},
+				Extra:  []string{},
+			},
+			Err: nil,
+		},
+	})
+	nextIn := new(dns.Msg)
+	nextIn.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
+	nextOut := new(dns.Msg)
+	nextOut.Answer = []dns.RR{
+		test.A("example.com IN A 127.0.0.1"),
+	}
+	h := NewMockHandler(t, []MockHandlerAction{
+		{
+			In:    *nextIn,
+			Out:   *nextOut,
+			Rcode: dns.RcodeSuccess,
+			Err:   nil,
+		},
+	})
+	i := Injector{
+		client: &r,
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	req := new(dns.Msg)
+	req.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	code, err := i.ServeDNS(context.Background(), rec, req)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if code != dns.RcodeSuccess {
+		t.Errorf("Expected rcode %d, got %d\n", dns.RcodeSuccess, code)
+	}
+	if rec.Msg == nil {
+		t.Fatalf("Expected message to not be nil\n")
+	}
+	if len(rec.Msg.Answer) != 2 {
+		t.Fatalf("Expected answer length to be 2, got %d\n", len(rec.Msg.Answer))
+	}
+	expectedAnswer, err := dns.NewRR("example.com. IN CNAME example.net.")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if rec.Msg.Answer[0].String() != expectedAnswer.String() {
+		t.Fatalf("Expected answer to be '%s', got '%s'\n", expectedAnswer, rec.Msg.Answer[0])
+	}
+	expectedAnswer, err = dns.NewRR("example.net. IN A 127.0.0.1")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if rec.Msg.Answer[1].String() != expectedAnswer.String() {
+		t.Fatalf("Expected answer to be '%s', got '%s'\n", expectedAnswer, rec.Msg.Answer[1])
+	}
+	if len(rec.Msg.Ns) != 0 {
+		t.Errorf("Expected ns length to be 0, got %d\n", len(rec.Msg.Ns))
+	}
+	if len(rec.Msg.Extra) != 0 {
+		t.Errorf("Expected extra length to be 0, got %d\n", len(rec.Msg.Extra))
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
 type MockHandlerAction struct {
 	In    dns.Msg
 	Out   dns.Msg
