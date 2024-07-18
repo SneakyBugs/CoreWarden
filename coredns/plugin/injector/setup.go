@@ -6,6 +6,7 @@ import (
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/upstream"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,8 +50,9 @@ func setup(c *caddy.Controller) error {
 	client := resolver.NewResolverClient(conn)
 
 	injectorPlugin := Injector{
-		logger: logger,
-		client: client,
+		logger:   logger,
+		client:   client,
+		upstream: upstream.New(),
 	}
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		injectorPlugin.next = next

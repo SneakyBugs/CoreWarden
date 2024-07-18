@@ -15,9 +15,14 @@ import (
 const name = "injector"
 
 type Injector struct {
-	client resolver.ResolverClient
-	logger *zap.Logger
-	next   plugin.Handler
+	client   resolver.ResolverClient
+	upstream Upstream
+	logger   *zap.Logger
+	next     plugin.Handler
+}
+
+type Upstream interface {
+	Lookup(ctx context.Context, state request.Request, name string, typ uint16) (*dns.Msg, error)
 }
 
 func (i *Injector) Name() string {
@@ -63,6 +68,17 @@ func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 	if err != nil {
 		i.logger.Error("RR parsing error", zap.Error(err))
 		return dns.RcodeServerFailure, err
+	}
+
+	// Perform CNAME lookup if needed.
+	if len(m.Answer) == 1 && m.Answer[0].Header().Rrtype == dns.TypeCNAME {
+		if record, ok := m.Answer[0].(*dns.CNAME); ok {
+			i.logger.Info("Querying upstream for CNAME record", zap.String("target", record.Target), zap.Uint16("qtype", state.QType()))
+			if up, err := i.upstream.Lookup(ctx, state, record.Target, state.QType()); err == nil && up != nil {
+				m.Truncated = up.Truncated
+				m.Answer = append(m.Answer, up.Answer...)
+			}
+		}
 	}
 
 	return m.Rcode, w.WriteMsg(m)

@@ -244,6 +244,34 @@ func TestResolveRecord(t *testing.T) {
 	}
 }
 
+func TestResolveCNAMERecord(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "foo 3600 IN CNAME bar.example.com."),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo.example.com.",
+		Qtype: dns.TypeA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	if len(res.Answer) != 1 {
+		t.Fatalf("expected answer length 1, got %d\n", len(res.Answer))
+	}
+	expectedAnswer := "foo.example.com.\t3600\tIN\tCNAME\tbar.example.com."
+	if res.Answer[0] != expectedAnswer {
+		t.Fatalf("expected answer to be '%s', got '%s'", expectedAnswer, res.Answer[0])
+	}
+}
+
 func TestResolveRecordQtype(t *testing.T) {
 	s, closer := createTestStorage()
 	ctx := context.Background()
@@ -258,7 +286,7 @@ func TestResolveRecordQtype(t *testing.T) {
 	}
 	_, err = s.CreateRecord(ctx, RecordCreateParameters{
 		Zone:    "example.com.",
-		RR:      toRRString(t, "foo 3600 IN CNAME foo.example.com"),
+		RR:      toRRString(t, "foo 3600 IN MX 10 mail.example.com."),
 		Comment: "test",
 	})
 	if err != nil {
@@ -491,6 +519,7 @@ func createTestStorage() (s Storage, closer func(context.Context)) {
 		fx.Populate(
 			&s,
 		),
+		fx.NopLogger,
 	)
 	go func() {
 		app.Run()

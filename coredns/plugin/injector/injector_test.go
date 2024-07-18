@@ -8,6 +8,7 @@ import (
 	"git.houseofkummer.com/lior/home-dns/coredns/plugin/injector/resolver"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
+	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -257,7 +258,7 @@ func TestInvalidExtraRR(t *testing.T) {
 	h.AssertDone()
 }
 
-func TestCnameTargetingInjector(t *testing.T) {
+func TestCname(t *testing.T) {
 	r := NewMockResolver(t, []MockResolverAction{
 		{
 			In: &resolver.Question{
@@ -271,111 +272,25 @@ func TestCnameTargetingInjector(t *testing.T) {
 			},
 			Err: nil,
 		},
-		{
-			In: &resolver.Question{
-				Name:  "example.net.",
-				Qtype: uint32(dns.TypeA),
-			},
-			Result: &resolver.Response{
-				Answer: []string{"example.net. IN A 127.0.0.1"},
-				Ns:     []string{},
-				Extra:  []string{},
-			},
-			Err: nil,
-		},
 	})
-	h := NewMockHandler(t, []MockHandlerAction{})
-	i := Injector{
-		client: &r,
-		logger: zap.NewNop(),
-		next:   &h,
-	}
-
-	req := new(dns.Msg)
-	req.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err := i.ServeDNS(context.Background(), rec, req)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v\n", err)
-	}
-	if code != dns.RcodeSuccess {
-		t.Errorf("Expected rcode %d, got %d\n", dns.RcodeSuccess, code)
-	}
-	if rec.Msg == nil {
-		t.Fatalf("Expected message to not be nil\n")
-	}
-	if len(rec.Msg.Answer) != 2 {
-		t.Fatalf("Expected answer length to be 2, got %d\n", len(rec.Msg.Answer))
-	}
-	expectedAnswer, err := dns.NewRR("example.com. IN CNAME example.net.")
-	if err != nil {
-		t.Fatalf("Expected no error, got %v\n", err)
-	}
-	if rec.Msg.Answer[0].String() != expectedAnswer.String() {
-		t.Fatalf("Expected answer to be '%s', got '%s'\n", expectedAnswer, rec.Msg.Answer[0])
-	}
-	expectedAnswer, err = dns.NewRR("example.net. IN A 127.0.0.1")
-	if err != nil {
-		t.Fatalf("Expected no error, got %v\n", err)
-	}
-	if rec.Msg.Answer[1].String() != expectedAnswer.String() {
-		t.Fatalf("Expected answer to be '%s', got '%s'\n", expectedAnswer, rec.Msg.Answer[1])
-	}
-	if len(rec.Msg.Ns) != 0 {
-		t.Errorf("Expected ns length to be 0, got %d\n", len(rec.Msg.Ns))
-	}
-	if len(rec.Msg.Extra) != 0 {
-		t.Errorf("Expected extra length to be 0, got %d\n", len(rec.Msg.Extra))
-	}
-	r.AssertDone()
-	h.AssertDone()
-}
-
-func TestCnameTargetingUpstream(t *testing.T) {
-	r := NewMockResolver(t, []MockResolverAction{
-		{
-			In: &resolver.Question{
-				Name:  "example.com.",
-				Qtype: uint32(dns.TypeA),
-			},
-			Result: &resolver.Response{
-				Answer: []string{"example.com. IN CNAME example.net."},
-				Ns:     []string{},
-				Extra:  []string{},
-			},
-			Err: nil,
-		},
-		{
-			In: &resolver.Question{
-				Name:  "example.net.",
-				Qtype: uint32(dns.TypeA),
-			},
-			Result: &resolver.Response{
-				Answer: []string{},
-				Ns:     []string{},
-				Extra:  []string{},
-			},
-			Err: nil,
-		},
-	})
-	nextIn := new(dns.Msg)
-	nextIn.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
 	nextOut := new(dns.Msg)
 	nextOut.Answer = []dns.RR{
-		test.A("example.com IN A 127.0.0.1"),
+		test.A("example.net IN A 127.0.0.1"),
 	}
-	h := NewMockHandler(t, []MockHandlerAction{
+	h := NewMockHandler(t, []MockHandlerAction{})
+	u := NewMockUpstream(t, []MockUpstreamAction{
 		{
-			In:    *nextIn,
-			Out:   *nextOut,
-			Rcode: dns.RcodeSuccess,
-			Err:   nil,
+			Name:   "example.net.",
+			Typ:    dns.TypeA,
+			Result: nextOut,
+			Err:    nil,
 		},
 	})
 	i := Injector{
-		client: &r,
-		logger: zap.NewNop(),
-		next:   &h,
+		client:   &r,
+		logger:   zap.NewNop(),
+		next:     &h,
+		upstream: &u,
 	}
 
 	req := new(dns.Msg)
@@ -520,5 +435,42 @@ func (r *MockResolver) Resolve(ctx context.Context, in *resolver.Question, opts 
 func (r *MockResolver) AssertDone() {
 	if r.currentIndex != len(r.actions) {
 		r.t.Fatalf("Expected client to call all mock actions, called %d out of %d method calls\n", r.currentIndex, len(r.actions))
+	}
+}
+
+type MockUpstream struct {
+	actions      []MockUpstreamAction
+	currentIndex int
+	t            *testing.T
+}
+
+type MockUpstreamAction struct {
+	Name   string
+	Typ    uint16
+	Result *dns.Msg
+	Err    error
+}
+
+func (u *MockUpstream) Lookup(ctx context.Context, state request.Request, name string, typ uint16) (*dns.Msg, error) {
+	if len(u.actions) <= u.currentIndex {
+		u.t.Fatalf("Client called Lookup when no more method calls were expected\n")
+	}
+
+	current := u.actions[u.currentIndex]
+	if name != current.Name {
+		u.t.Fatalf("Expected name to be '%s', got '%s'\n", current.Name, name)
+	}
+	if typ != current.Typ {
+		u.t.Fatalf("Expected typ to be %d, got %d\n", current.Typ, typ)
+	}
+	u.currentIndex++
+	return current.Result, current.Err
+}
+
+func NewMockUpstream(t *testing.T, actions []MockUpstreamAction) MockUpstream {
+	return MockUpstream{
+		actions:      actions,
+		currentIndex: 0,
+		t:            t,
 	}
 }

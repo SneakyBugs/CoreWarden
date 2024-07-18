@@ -25,7 +25,7 @@ WHERE zone = $1;
 
 -- name: ResolveRecord :many
 SELECT * FROM Records
-WHERE name = $1 and type = $2 and is_wildcard = false;
+WHERE name = $1 and (type = $2 or type = 5) and is_wildcard = false;
 
 -- name: ResolveWildcardRecord :many
 SELECT * FROM Records
