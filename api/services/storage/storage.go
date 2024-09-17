@@ -154,6 +154,17 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 		if anyExist {
 			return Record{}, CNAMEArgumentError
 		}
+	} else {
+		cnameExists, err := s.queries.CNAMERecordExistsAtNode(ctx, queries.CNAMERecordExistsAtNodeParams{
+			Zone: zoneFqdn,
+			Name: fullName,
+		})
+		if err != nil {
+			return Record{}, err
+		}
+		if cnameExists {
+			return Record{}, CNAMEArgumentError
+		}
 	}
 
 	r, err := s.queries.CreateRecord(ctx, queries.CreateRecordParams{

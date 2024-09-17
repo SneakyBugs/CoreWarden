@@ -6,8 +6,14 @@ RETURNING *;
 
 -- name: AnyRecordsExistAtNode :one
 SELECT EXISTS(
-				SELECT 1 FROM Records
-				WHERE zone = $1 and name = $2
+  SELECT 1 FROM Records
+  WHERE zone = $1 and name = $2
+);
+
+-- name: CNAMERecordExistsAtNode :one
+SELECT EXISTS(
+  SELECT 1 FROM Records
+  WHERE zone = $1 and name = $2 and type = 5
 );
 
 -- name: ReadRecord :one

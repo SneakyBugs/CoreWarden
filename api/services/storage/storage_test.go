@@ -60,6 +60,29 @@ func TestCreateCNAMEWhenCannot(t *testing.T) {
 	}
 }
 
+func TestCreateRecordWhenCnameExists(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "foo 3600 IN CNAME bar.example.com."),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+
+	_, err = s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
+		Comment: "test",
+	})
+	if err != CNAMEArgumentError {
+		t.Fatalf("Expected an error '%v', got '%v'\n", CNAMEArgumentError, err)
+	}
+}
+
 func TestReadRecord(t *testing.T) {
 	s, closer := createTestStorage()
 	ctx := context.Background()

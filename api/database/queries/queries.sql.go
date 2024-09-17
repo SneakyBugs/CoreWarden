@@ -11,8 +11,8 @@ import (
 
 const anyRecordsExistAtNode = `-- name: AnyRecordsExistAtNode :one
 SELECT EXISTS(
-				SELECT 1 FROM Records
-				WHERE zone = $1 and name = $2
+  SELECT 1 FROM Records
+  WHERE zone = $1 and name = $2
 )
 `
 
@@ -23,6 +23,25 @@ type AnyRecordsExistAtNodeParams struct {
 
 func (q *Queries) AnyRecordsExistAtNode(ctx context.Context, arg AnyRecordsExistAtNodeParams) (bool, error) {
 	row := q.db.QueryRow(ctx, anyRecordsExistAtNode, arg.Zone, arg.Name)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const cNAMERecordExistsAtNode = `-- name: CNAMERecordExistsAtNode :one
+SELECT EXISTS(
+  SELECT 1 FROM Records
+  WHERE zone = $1 and name = $2 and type = 5
+)
+`
+
+type CNAMERecordExistsAtNodeParams struct {
+	Zone string
+	Name string
+}
+
+func (q *Queries) CNAMERecordExistsAtNode(ctx context.Context, arg CNAMERecordExistsAtNodeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, cNAMERecordExistsAtNode, arg.Zone, arg.Name)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
