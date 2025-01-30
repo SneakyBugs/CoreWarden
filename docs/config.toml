@@ -1,0 +1,20 @@
+baseURL = "https://example.com"
+title = "Home DNS"
+languageCode = "en"
+DefaultContentLanguage = "en"
+enableInlineShortcodes = true
+footnoteReturnLinkContents = "^"
+
+pygmentsUseClasses = true
+theme = "satellite"
+
+taxonomies = []
+
+[outputs]
+  home = ["HTML", "JSON"]
+
+[params]
+[params.seo]
+  description = "Satellite Hugo theme demo."
+[params.icons]
+  favicon = "images/favicon.svg"
