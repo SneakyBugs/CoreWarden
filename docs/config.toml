@@ -1,5 +1,5 @@
-baseURL = "https://example.com"
-title = "Home DNS"
+baseURL = "https://sneakybugs.github.io/CoreWarden/"
+title = "CoreWarden"
 languageCode = "en"
 DefaultContentLanguage = "en"
 enableInlineShortcodes = true
@@ -15,6 +15,6 @@ taxonomies = []
 
 [params]
 [params.seo]
-  description = "Satellite Hugo theme demo."
+  description = "CoreWarden is the Kubernetes-native ad-blocking DNS"
 [params.icons]
   favicon = "images/favicon.svg"

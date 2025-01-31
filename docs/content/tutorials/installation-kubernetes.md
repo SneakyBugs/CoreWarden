@@ -2,7 +2,7 @@
 title: Getting started on Kubernetes using Helm
 ---
 
-In this guide we will install Home DNS on a local Kubernetes cluster.
+In this guide we will install CoreWarden on a local Kubernetes cluster.
 
 You may follow this guide using a production Kubernetes cluster.
 Following the notes for production deployment, this guide can be used for
@@ -143,7 +143,7 @@ service:
 
 ## Summary and next steps
 
-We have successfully deployed an example deployment of Home DNS.
+We have successfully deployed an example deployment of CoreWarden.
 Make sure to follow the production deployment notes for a robust production setup.
 
 The next step would be [configuring External DNS on your Kubernetes cluster
