@@ -52,24 +52,6 @@ provider "helm" {
   }
 }
 
-# K3d uses a hard coded DNS server.
-# This resource causes it to use our private DNS.
-# See https://github.com/k3s-io/k3s/pull/4397
-# Private DNS is required for using private Gitlab as OIDC provider.
-resource "kubernetes_config_map" "coredns" {
-  metadata {
-    name      = "coredns-custom"
-    namespace = "kube-system"
-  }
-  data = {
-    "private.server" = <<EOF
-houseofkummer.com:53 {
-  forward . 192.168.0.180:53
-}
-EOF
-  }
-}
-
 resource "kubernetes_secret" "postgres_credentials" {
   metadata {
     name = "postgres-credentials"
