@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sneakybugs/corewarden/api/database"
-	"github.com/sneakybugs/corewarden/api/services/health"
 	"github.com/miekg/dns"
 	migrate "github.com/rubenv/sql-migrate"
+	"github.com/sneakybugs/corewarden/api/database"
+	"github.com/sneakybugs/corewarden/api/services/health"
 	"go.uber.org/fx"
 )
 
