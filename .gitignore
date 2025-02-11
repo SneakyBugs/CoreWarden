@@ -3,3 +3,4 @@
 *.tfstate.backup
 kubeconfig.yaml
 build
+docs/public
