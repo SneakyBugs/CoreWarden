@@ -40,7 +40,7 @@ podMonitor:
 replicaCount: 1
 
 image:
-  repository: docker.houseofkummer.com/lior/home-dns/coredns
+  repository: ghcr.io/sneakybugs/corewarden-coredns
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

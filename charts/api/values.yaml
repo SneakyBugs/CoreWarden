@@ -25,7 +25,7 @@ config:
 replicaCount: 1
 
 image:
-  repository: docker.houseofkummer.com/lior/home-dns/api
+  repository: ghcr.io/sneakybugs/corewarden-api
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
