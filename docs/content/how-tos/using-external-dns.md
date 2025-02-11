@@ -56,8 +56,8 @@ provider:
   name: webhook
   webhook:
     image:
-      repository: TODO
-      tag: TODO
+      repository: oci://ghcr.io/sneakybugs/corewarden-externaldns-provider
+      tag: 3.0.0
     env:
       - name: WEBHOOK_API_ENDPOINT
         valueFrom:

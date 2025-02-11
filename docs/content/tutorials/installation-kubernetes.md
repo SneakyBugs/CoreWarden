@@ -57,15 +57,15 @@ Create a Helm values file named `postgres-values.yaml` with authentication crede
 ```yaml
 # Inside postgres-values.yaml
 auth:
-  username: dnsapi
-  database: dnsapi
+  username: api
+  database: api
   password: secret_value
 ```
 
 Install the Postgres Helm chart providing the values file created in the previous step:
 
 ```
-helm install dnsapi-db oci://registry-1.docker.io/bitnamicharts/postgresql --values postgres-values.yaml
+helm install corewarden-db oci://registry-1.docker.io/bitnamicharts/postgresql --values postgres-values.yaml
 ```
 
 #### Notes for production deployment
@@ -88,10 +88,10 @@ config:
     - id: tutorial
       secretHash: $2a$10$ksbGVKQ6MBjH9vuKWHEloOwOHdFBEX6abYRtnOmat.camf2ogIrmq
   postgres:
-    host: dns-api-db-postgresql
-    database: dns-api
+    host: corewarden-db-postgresql
+    database: api
     existingSecret:
-      name: dns-api-db-credentials
+      name: corewarden-db-credentials
 ingress:
   host: dns.example.com
 ```
@@ -99,7 +99,7 @@ ingress:
 Install the `api` chart:
 
 ```
-helm install dnsapi-api TODO --values api-values.yaml
+helm install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api --values api-values.yaml
 ```
 
 #### Notes for production deployment
@@ -120,13 +120,13 @@ Create a values file named `coredns-values.yaml` with the following content:
 ```yaml
 # Inside coredns-values.yaml
 config:
-  injectorTarget: dns-api:6969
+  injectorTarget: corewarden-api:6969
 ```
 
 Install the `coredns` chart:
 
 ```
-helm install dnsapi-coredns TODO --values coredns-values.yaml
+helm install corewarden-coredns oci://ghcr.io/sneakybugs/corewarden-coredns --values coredns-values.yaml
 ```
 
 #### Notes for production deployment
