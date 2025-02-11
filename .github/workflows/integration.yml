@@ -256,9 +256,11 @@ jobs:
         uses: peaceiris/actions-hugo@v3
         with:
           hugo-version: '0.111.3'
-      - run: hugo --baseURL '${{ steps.pages-url.outputs.url }}'
+      - run: |
+          cd docs
+          hugo --baseURL '${{ steps.pages-url.outputs.url }}'
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: docs/public
       - uses: actions/deploy-pages@v4
         id: deployment
