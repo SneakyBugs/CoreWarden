@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.houseofkummer.com/lior/home-dns/api/database"
-	"git.houseofkummer.com/lior/home-dns/api/services/health"
+	"github.com/sneakybugs/corewarden/api/database"
+	"github.com/sneakybugs/corewarden/api/services/health"
 	"github.com/miekg/dns"
 	migrate "github.com/rubenv/sql-migrate"
 	"go.uber.org/fx"

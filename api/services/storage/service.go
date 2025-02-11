@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
-	"git.houseofkummer.com/lior/home-dns/api/database"
-	"git.houseofkummer.com/lior/home-dns/api/database/queries"
-	"git.houseofkummer.com/lior/home-dns/api/services/health"
+	"github.com/sneakybugs/corewarden/api/database"
+	"github.com/sneakybugs/corewarden/api/database/queries"
+	"github.com/sneakybugs/corewarden/api/services/health"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	migrate "github.com/rubenv/sql-migrate"

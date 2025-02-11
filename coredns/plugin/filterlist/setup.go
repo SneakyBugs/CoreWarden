@@ -3,7 +3,7 @@ package filterlist
 import (
 	"time"
 
-	"git.houseofkummer.com/lior/home-dns/coredns/plugin/slog"
+	"github.com/sneakybugs/corewarden/coredns/plugin/slog"
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"

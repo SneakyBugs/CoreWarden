@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/logger"
+	"github.com/sneakybugs/corewarden/api/services/logger"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

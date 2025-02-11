@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"git.houseofkummer.com/lior/home-dns/external-dns/api/services"
+	"github.com/sneakybugs/corewarden/external-dns/api/services"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

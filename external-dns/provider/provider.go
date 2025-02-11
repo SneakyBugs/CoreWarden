@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.houseofkummer.com/lior/home-dns/client"
+	"github.com/sneakybugs/corewarden/client"
 	"github.com/miekg/dns"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"

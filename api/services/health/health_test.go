@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/rest"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
 )

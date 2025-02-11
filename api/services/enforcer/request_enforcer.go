@@ -3,7 +3,7 @@ package enforcer
 import (
 	"net/http"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/auth"
+	"github.com/sneakybugs/corewarden/api/services/auth"
 	"github.com/miekg/dns"
 )
 

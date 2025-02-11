@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.houseofkummer.com/lior/home-dns/coredns/plugin/injector/resolver"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/coredns/coredns/request"

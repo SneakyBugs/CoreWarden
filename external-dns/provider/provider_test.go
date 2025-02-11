@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"git.houseofkummer.com/lior/home-dns/client"
+	"github.com/sneakybugs/corewarden/client"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/external-dns/endpoint"

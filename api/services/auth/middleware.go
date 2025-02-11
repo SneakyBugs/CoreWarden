@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/rest"
 	"go.uber.org/zap"
 )
 

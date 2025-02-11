@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"git.houseofkummer.com/lior/home-dns/api/services"
-	"git.houseofkummer.com/lior/home-dns/api/services/auth"
+	"github.com/sneakybugs/corewarden/api/services"
+	"github.com/sneakybugs/corewarden/api/services/auth"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

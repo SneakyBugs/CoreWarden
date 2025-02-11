@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/auth"
+	"github.com/sneakybugs/corewarden/api/services/auth"
 )
 
 func TestRequestEnforcer(t *testing.T) {

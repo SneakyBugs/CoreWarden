@@ -3,16 +3,16 @@ package services
 import (
 	"fmt"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/auth"
-	"git.houseofkummer.com/lior/home-dns/api/services/enforcer"
-	"git.houseofkummer.com/lior/home-dns/api/services/grpc"
-	"git.houseofkummer.com/lior/home-dns/api/services/health"
-	"git.houseofkummer.com/lior/home-dns/api/services/logger"
-	"git.houseofkummer.com/lior/home-dns/api/services/records"
-	"git.houseofkummer.com/lior/home-dns/api/services/resolver"
-	"git.houseofkummer.com/lior/home-dns/api/services/rest"
-	"git.houseofkummer.com/lior/home-dns/api/services/storage"
-	"git.houseofkummer.com/lior/home-dns/api/services/telemetry"
+	"github.com/sneakybugs/corewarden/api/services/auth"
+	"github.com/sneakybugs/corewarden/api/services/enforcer"
+	"github.com/sneakybugs/corewarden/api/services/grpc"
+	"github.com/sneakybugs/corewarden/api/services/health"
+	"github.com/sneakybugs/corewarden/api/services/logger"
+	"github.com/sneakybugs/corewarden/api/services/records"
+	"github.com/sneakybugs/corewarden/api/services/resolver"
+	"github.com/sneakybugs/corewarden/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/telemetry"
 	"go.uber.org/fx"
 )
 

@@ -3,7 +3,7 @@ package webhook
 import (
 	"io"
 
-	"git.houseofkummer.com/lior/home-dns/external-dns/provider"
+	"github.com/sneakybugs/corewarden/external-dns/provider"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"

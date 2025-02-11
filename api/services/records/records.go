@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/rest"
-	"git.houseofkummer.com/lior/home-dns/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/miekg/dns"

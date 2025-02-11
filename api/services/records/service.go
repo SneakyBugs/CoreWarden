@@ -1,9 +1,9 @@
 package records
 
 import (
-	"git.houseofkummer.com/lior/home-dns/api/services/auth"
-	"git.houseofkummer.com/lior/home-dns/api/services/enforcer"
-	"git.houseofkummer.com/lior/home-dns/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/auth"
+	"github.com/sneakybugs/corewarden/api/services/enforcer"
+	"github.com/sneakybugs/corewarden/api/services/storage"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"git.houseofkummer.com/lior/home-dns/api/database/queries"
+	"github.com/sneakybugs/corewarden/api/database/queries"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/miekg/dns"
 	"google.golang.org/grpc/codes"

@@ -1,10 +1,10 @@
 package services
 
 import (
-	"git.houseofkummer.com/lior/home-dns/api/services/health"
-	"git.houseofkummer.com/lior/home-dns/api/services/logger"
-	"git.houseofkummer.com/lior/home-dns/api/services/rest"
-	"git.houseofkummer.com/lior/home-dns/external-dns/api/services/webhook"
+	"github.com/sneakybugs/corewarden/api/services/health"
+	"github.com/sneakybugs/corewarden/api/services/logger"
+	"github.com/sneakybugs/corewarden/api/services/rest"
+	"github.com/sneakybugs/corewarden/external-dns/api/services/webhook"
 	"go.uber.org/fx"
 )
 

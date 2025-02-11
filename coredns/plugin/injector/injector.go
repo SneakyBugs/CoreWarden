@@ -3,7 +3,7 @@ package injector
 import (
 	"context"
 
-	"git.houseofkummer.com/lior/home-dns/coredns/plugin/injector/resolver"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"

@@ -10,7 +10,7 @@ build/coredns: build/coredns.tar.gz
 
 build/coredns/plugin/%: plugin/% build/coredns
 	cp -r $< build/coredns/plugin
-	sed s:git.houseofkummer.com/lior/home-dns:github.com/coredns: -i $@$/**/*.go
+	sed s:github.com/sneakybugs/corewarden:github.com/coredns: -i $@$/**/*.go
 
 build/coredns/plugin.cfg: plugin.cfg
 	cp $^ build/coredns

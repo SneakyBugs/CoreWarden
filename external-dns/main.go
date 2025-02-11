@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"git.houseofkummer.com/lior/home-dns/external-dns/cmd"
+	"github.com/sneakybugs/corewarden/external-dns/cmd"
 )
 
 func main() {

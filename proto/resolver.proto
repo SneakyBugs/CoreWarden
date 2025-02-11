@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package resolver;
 
-option go_package = "git.houseofkummer.com/lior/home-dns/api/resolver";
+option go_package = "github.com/sneakybugs/corewarden/api/resolver";
 
 service Resolver {
 	rpc Resolve(Question) returns (Response) {}

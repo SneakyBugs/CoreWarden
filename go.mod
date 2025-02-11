@@ -1,4 +1,4 @@
-module git.houseofkummer.com/lior/home-dns
+module github.com/sneakybugs/corewarden
 
 go 1.22.2
 

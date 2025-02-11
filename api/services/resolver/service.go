@@ -3,8 +3,8 @@ package resolver
 import (
 	"context"
 
-	"git.houseofkummer.com/lior/home-dns/api/resolver"
-	"git.houseofkummer.com/lior/home-dns/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/resolver"
+	"github.com/sneakybugs/corewarden/api/services/storage"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

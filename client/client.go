@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/records"
-	"git.houseofkummer.com/lior/home-dns/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/records"
+	"github.com/sneakybugs/corewarden/api/services/rest"
 	"github.com/miekg/dns"
 )
 

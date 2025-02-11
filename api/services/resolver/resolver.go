@@ -3,7 +3,7 @@ package resolver
 import (
 	"context"
 
-	"git.houseofkummer.com/lior/home-dns/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/storage"
 )
 
 type Resolver interface {
