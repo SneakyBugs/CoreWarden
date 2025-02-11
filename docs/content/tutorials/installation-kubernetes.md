@@ -8,20 +8,28 @@ You may follow this guide using a production Kubernetes cluster.
 Following the notes for production deployment, this guide can be used for
 configuring a robust production setup.
 
+## Requirements for following this guide
+
+You will need a Linux system with the following installed:
+
+- dig
+- Helm
+- kubectl
+- k3d (if you don't already have a Kubernetes cluster)
+
 ## Setting up a cluster
 
 To follow this tutorial you will need a Kubernetes cluster.
 In this section we will set up a local cluster with `k3d` which will work fine for evaluation or development purposes.
 [Skip to the next section if you already have a cluster you want to install on.](#installation)
 
-[Begin by installing `k3d`.](https://k3d.io/#installation)
-Then create the cluster and configure `kubectl` to use the cluster:
+Create a cluster and configure `kubectl` to use the cluster:
 
 
 ```
 sudo k3d cluster create dns-tutorial
 sudo k3d kubeconfig merge dns-tutorial --output ~/.kube/config
-sudo chown <you> ~/.kube/config
+sudo chown $(whoami) ~/.kube/config
 ```
 
 Now let's check the cluster works.
@@ -46,9 +54,9 @@ kube-system   metrics-server-54fd9b65b-kktdb            1/1     Running     0   
 
 You now have a Kubernetes cluster up and running.
 
-## Installation
+## Installing CoreWarden
 
-### Database setup
+### Database installation
 
 In this step we will install the Bitnami Postgres chart to quickly set up a Postgres database.
 
@@ -90,8 +98,8 @@ config:
   postgres:
     host: corewarden-db-postgresql
     database: api
-    existingSecret:
-      name: corewarden-db-credentials
+    user: api
+    password: secret_value
 ingress:
   host: dns.example.com
 ```
@@ -113,14 +121,14 @@ ingress:
     cert-manager.io/cluster-issuer: example-issuer
 ```
 
-### DNS server installation
+### CoreDNS server installation
 
 Create a values file named `coredns-values.yaml` with the following content:
 
 ```yaml
 # Inside coredns-values.yaml
 config:
-  injectorTarget: corewarden-api:6969
+  injectorTarget: corewarden-api-corewarden-api-chart:6969
 ```
 
 Install the `coredns` chart:
@@ -141,6 +149,48 @@ service:
     metallb.universe.tf/allow-shared-ip: dns
 ```
 
+## Verifying the DNS is working
+
+Get the Service used for DNS and figure out it's external IP:
+
+```
+kubectl get service corewarden-coredns-corewarden-coredns-chart-tcp
+```
+
+In our case the external IP is `172.19.0.2`. Let's perform a DNS query to check it
+works:
+
+```
+dig @172.19.0.2 google.com
+```
+
+The output should look like:
+
+```
+; <<>> DiG 9.18.33-1~deb12u2-Debian <<>> @172.19.0.2 google.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 14892
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: f510bec38f682e60 (echoed)
+;; QUESTION SECTION:
+;google.com.                    IN      A
+
+;; ANSWER SECTION:
+google.com.             195     IN      A       142.250.75.142
+
+;; Query time: 0 msec
+;; SERVER: 172.19.0.2#53(172.19.0.2) (UDP)
+;; WHEN: Tue Feb 11 18:47:16 UTC 2025
+;; MSG SIZE  rcvd: 77
+```
+
+We have verified our DNS server works.
+
 ## Summary and next steps
 
 We have successfully deployed an example deployment of CoreWarden.
@@ -148,5 +198,4 @@ Make sure to follow the production deployment notes for a robust production setu
 
 The next step would be [configuring External DNS on your Kubernetes cluster
 by following this guide.]({{< relref "../how-tos/using-external-dns" >}})
-So that DNS records will automatically be created for services running on
-Kubernetes.
+So DNS records will automatically be created for services running on Kubernetes.
