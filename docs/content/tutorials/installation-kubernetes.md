@@ -99,7 +99,7 @@ ingress:
 Install the `api` chart:
 
 ```
-helm install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api --values api-values.yaml
+helm install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api-chart --values api-values.yaml
 ```
 
 #### Notes for production deployment
@@ -126,7 +126,7 @@ config:
 Install the `coredns` chart:
 
 ```
-helm install corewarden-coredns oci://ghcr.io/sneakybugs/corewarden-coredns --values coredns-values.yaml
+helm install corewarden-coredns oci://ghcr.io/sneakybugs/corewarden-coredns-chart --values coredns-values.yaml
 ```
 
 #### Notes for production deployment

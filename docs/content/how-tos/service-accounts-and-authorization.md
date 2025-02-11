@@ -46,7 +46,7 @@ Apply the API server Helm chart with the updated values to update the API server
 configuration:
 
 ```yaml
-helm upgrade --install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api --values api-values.yaml
+helm upgrade --install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api-chart --values api-values.yaml
 ```
 
 ## Verifying the service account works

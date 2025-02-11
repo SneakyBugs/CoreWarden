@@ -8,7 +8,7 @@ CoreWarden is an ad-blocking DNS server prioritizing the needs of Kubernetes use
 For home labbers using Kubernetes, CoreWarden offers a much better developer
 experience compared to existing solutions.
 
-![](/images/title.svg)
+![](images/title.svg)
 
 CoreWarden offers:
 
