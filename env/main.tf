@@ -14,6 +14,13 @@ resource "k3d_cluster" "cluster" {
 apiVersion: k3d.io/v1alpha5
 kind: Simple
 
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+
 # Expose ports 80 via 8080 and 443 via 8443.
 ports:
   - port: 3080:80
@@ -65,10 +72,22 @@ resource "kubernetes_secret" "postgres_credentials" {
   }
 }
 
+resource "helm_release" "traefik" {
+  name       = "traefik"
+  repository = "oci://ghcr.io/traefik/helm"
+  chart      = "traefik"
+
+  set {
+    name  = "providers.kubernetesGateway.enabled"
+    value = true
+  }
+}
+
 resource "helm_release" "database" {
   name       = "postgres"
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "postgresql"
+
   set {
     name  = "auth.existingSecret"
     value = "postgres-credentials"
