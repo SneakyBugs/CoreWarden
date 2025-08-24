@@ -8,7 +8,6 @@ import (
 	"github.com/miekg/dns"
 	"github.com/sneakybugs/corewarden/client"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
 	"sigs.k8s.io/external-dns/provider"
@@ -331,22 +330,4 @@ func groupByNameAndType(records []client.Record) []*endpoint.Endpoint {
 				targets...))
 	}
 	return endpoints
-}
-
-func targetArrayMarshaler(target *endpoint.Targets) zapcore.ArrayMarshalerFunc {
-	return func(ae zapcore.ArrayEncoder) error {
-		for _, t := range []string(*target) {
-			ae.AppendString(t)
-		}
-		return nil
-	}
-}
-
-func stringArrayMarshaler(array *[]string) zapcore.ArrayMarshalerFunc {
-	return func(ae zapcore.ArrayEncoder) error {
-		for _, item := range *array {
-			ae.AppendString(item)
-		}
-		return nil
-	}
 }
