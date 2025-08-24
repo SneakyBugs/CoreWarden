@@ -227,3 +227,23 @@ Usage from YAML config:
 # Inside dns-api.yaml
 postgres-password: REDACTED
 ```
+
+## `verbose`
+
+Enables verbose development logging when true.
+Defaults to false.
+
+#### Example
+
+Usage as command line flag:
+
+```
+api --verbose=true
+```
+
+Usage from YAML config:
+
+```yaml
+# Inside dns-api.yaml
+verbose: true
+```
