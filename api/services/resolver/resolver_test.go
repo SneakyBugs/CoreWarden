@@ -6,11 +6,11 @@ import (
 	"net"
 	"testing"
 
+	"github.com/miekg/dns"
 	"github.com/sneakybugs/corewarden/api/resolver"
 	grpcs "github.com/sneakybugs/corewarden/api/services/grpc"
 	"github.com/sneakybugs/corewarden/api/services/logger"
 	"github.com/sneakybugs/corewarden/api/services/storage"
-	"github.com/miekg/dns"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -80,6 +80,9 @@ func createTestClient(t *testing.T, returnError error) (resolver.ResolverClient,
 		fx.Supply(
 			storage.MockStorageOptions{
 				ReturnError: returnError,
+			},
+			logger.Options{
+				DevelopmentMode: true,
 			},
 		),
 		fx.Provide(

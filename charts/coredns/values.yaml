@@ -27,7 +27,7 @@ config:
       - https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
 
   # Injector gRPC server address.
-  injectorTarget: api:6969
+  injectorTarget: api-corewarden-api-chart:6969
 
 podMonitor:
   # Set to true to create PodMonitor resources to collect metrics from CoreDNS.

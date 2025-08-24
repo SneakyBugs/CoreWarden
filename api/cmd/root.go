@@ -69,6 +69,7 @@ func CreateRootCommand() Command {
 				PostgresUser:     cfg.GetString("postgres-user"),
 				PolicyFile:       cfg.GetString("policy-file"),
 				ServiceAccounts:  parsedServiceAccounts,
+				Verbose:          cfg.GetBool("verbose"),
 			})
 			app.Run()
 		},
@@ -104,6 +105,10 @@ func CreateRootCommand() Command {
 
 	cmd.Flags().String("postgres-password", "", "Postgres password")
 	_ = cfg.BindPFlag("postgres-password", cmd.Flags().Lookup("postgres-password"))
+
+	cmd.Flags().Bool("verbose", false, "Enable verbose debug logging")
+	_ = cfg.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
+	cfg.SetDefault("verbose", false)
 
 	cobra.OnInitialize(func() {
 		if configFile != "" {

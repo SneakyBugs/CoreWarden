@@ -5,10 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sneakybugs/corewarden/api/services/logger"
-	"github.com/sneakybugs/corewarden/api/services/rest"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/sneakybugs/corewarden/api/services/logger"
+	"github.com/sneakybugs/corewarden/api/services/rest"
 	"go.uber.org/fx"
 )
 
@@ -56,6 +56,11 @@ func TestAuthMiddlewareServerError(t *testing.T) {
 func createTestHandler() http.Handler {
 	var handler *chi.Mux
 	_ = fx.New(
+		fx.Supply(
+			logger.Options{
+				DevelopmentMode: true,
+			},
+		),
 		fx.Provide(
 			logger.NewService,
 			rest.NewMockService,

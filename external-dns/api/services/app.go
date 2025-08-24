@@ -14,6 +14,7 @@ type Options struct {
 	Secret      string
 	Zones       string
 	Port        uint16
+	Verbose     bool
 }
 
 func NewApp(options Options) *fx.App {
@@ -27,6 +28,9 @@ func NewApp(options Options) *fx.App {
 				ID:          options.ID,
 				Secret:      options.Secret,
 				Zones:       options.Zones,
+			},
+			logger.Options{
+				DevelopmentMode: options.Verbose,
 			},
 		),
 		fx.Provide(

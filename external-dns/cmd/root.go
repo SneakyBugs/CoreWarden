@@ -39,6 +39,7 @@ func CreateRootCommand() Command {
 				Secret:      cfg.GetString("api-secret"),
 				Zones:       cfg.GetString("zones"),
 				Port:        cfg.GetUint16("port"),
+				Verbose:     cfg.GetBool("verbose"),
 			})
 			app.Run()
 		},
@@ -62,6 +63,10 @@ func CreateRootCommand() Command {
 	cmd.Flags().Uint16("port", 0, "HTTP server listen port (default 8888)")
 	_ = cfg.BindPFlag("port", cmd.Flags().Lookup("port"))
 	cfg.SetDefault("port", 8888)
+
+	cmd.Flags().Bool("verbose", false, "Enable verbose debug logging")
+	_ = cfg.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
+	cfg.SetDefault("verbose", false)
 
 	cobra.OnInitialize(func() {
 		if configFile != "" {

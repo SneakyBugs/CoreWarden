@@ -10,7 +10,10 @@ type Options struct {
 	DevelopmentMode bool
 }
 
-func NewService() (*zap.Logger, error) {
+func NewService(o Options) (*zap.Logger, error) {
+	if o.DevelopmentMode {
+		return zap.NewDevelopment()
+	}
 	return zap.NewProduction()
 }
 

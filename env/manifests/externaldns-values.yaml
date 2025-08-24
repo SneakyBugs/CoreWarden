@@ -1,3 +1,7 @@
+sources:
+  - service
+  - gateway-grpcroute
+  - gateway-httproute
 provider:
   name: webhook
   webhook:
@@ -25,13 +29,17 @@ provider:
           configMapKeyRef:
             name: webhook
             key: zones
+      - name: WEBHOOK_VERBOSE
+        value: "true"
     # TODO
     # resources:
     livenessProbe:
       httpGet:
         path: /-/liveness
+        port: 8888
     readinessProbe:
       httpGet:
         path: /-/readiness
+        port: 8888
     # TODO
     # serviceMonitor:

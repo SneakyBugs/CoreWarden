@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sneakybugs/corewarden/client"
 	"github.com/miekg/dns"
+	"github.com/sneakybugs/corewarden/client"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
 )
@@ -155,9 +156,14 @@ func newTestProvider(t *testing.T, actions []MockClientAction) Provider {
 		currentActionIndex: 0,
 		t:                  t,
 	}
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		t.Fatalf("expected no error when creating Zap logger, got %v", err)
+	}
 	return Provider{
 		client: &mockClient,
 		zones:  []string{"example.com."},
+		logger: l,
 	}
 }
 

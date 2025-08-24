@@ -3,9 +3,9 @@ package webhook
 import (
 	"io"
 
-	"github.com/sneakybugs/corewarden/external-dns/provider"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
+	"github.com/sneakybugs/corewarden/external-dns/provider"
 	"go.uber.org/zap"
 	"sigs.k8s.io/external-dns/provider/webhook/api"
 )
@@ -24,6 +24,7 @@ func Register(o Options, r *chi.Mux, l *zap.Logger) error {
 		ID:          o.ID,
 		Secret:      o.Secret,
 		Zones:       o.Zones,
+		Logger:      l,
 	})
 	if err != nil {
 		return err

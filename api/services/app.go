@@ -26,6 +26,7 @@ type Options struct {
 	PostgresUser     string
 	PolicyFile       string
 	ServiceAccounts  []auth.ServiceAccount
+	Verbose          bool
 }
 
 func NewApp(options Options) *fx.App {
@@ -52,6 +53,9 @@ func NewApp(options Options) *fx.App {
 			},
 			auth.ServiceAccountAuthenticatorOptions{
 				Accounts: options.ServiceAccounts,
+			},
+			logger.Options{
+				DevelopmentMode: options.Verbose,
 			},
 		),
 		fx.Provide(

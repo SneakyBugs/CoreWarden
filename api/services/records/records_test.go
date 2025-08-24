@@ -9,14 +9,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/pb33f/libopenapi"
+	validator "github.com/pb33f/libopenapi-validator"
 	"github.com/sneakybugs/corewarden/api/services/auth"
 	"github.com/sneakybugs/corewarden/api/services/enforcer"
 	"github.com/sneakybugs/corewarden/api/services/logger"
 	"github.com/sneakybugs/corewarden/api/services/rest"
 	"github.com/sneakybugs/corewarden/api/services/storage"
-	"github.com/go-chi/chi/v5"
-	"github.com/pb33f/libopenapi"
-	validator "github.com/pb33f/libopenapi-validator"
 	"go.uber.org/fx"
 )
 
@@ -813,6 +813,9 @@ func createTestHandler(returnError error) http.Handler {
 			},
 			enforcer.CasbinEnforcerOptions{
 				PolicyFile: "test_policy.csv",
+			},
+			logger.Options{
+				DevelopmentMode: true,
 			},
 		),
 		fx.Provide(

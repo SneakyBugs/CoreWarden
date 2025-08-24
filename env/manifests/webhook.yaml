@@ -10,7 +10,7 @@ metadata:
   name: webhook
   namespace: external-dns
 data:
-  apiEndpoint: http://api.default:6970/v1
+  apiEndpoint: http://api-corewarden-api-chart.default:6970/v1
   zones: example.com.
 ---
 apiVersion: v1
