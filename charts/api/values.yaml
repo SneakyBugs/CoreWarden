@@ -65,7 +65,7 @@ ingress:
   #      - chart-example.local
 
 route:
-  enabled: true
+  enabled: false
   parentRefs:
     - name: traefik-gateway
   # hostname: chart-example.local

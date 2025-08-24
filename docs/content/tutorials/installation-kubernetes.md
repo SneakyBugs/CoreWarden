@@ -73,7 +73,7 @@ auth:
 Install the Postgres Helm chart providing the values file created in the previous step:
 
 ```
-helm install corewarden-db oci://registry-1.docker.io/bitnamicharts/postgresql --values postgres-values.yaml
+helm upgrade --install corewarden-db oci://registry-1.docker.io/bitnamicharts/postgresql --values postgres-values.yaml
 ```
 
 #### Notes for production deployment
@@ -87,6 +87,7 @@ Create a values file named `api-values.yaml` with the following content:
 
 ```yaml
 # Inside api-values.yaml
+fullnameOverride: corewarden-api
 config:
   policies: |-
     p, tutorial, records, example.com., edit
@@ -101,13 +102,14 @@ config:
     user: api
     password: secret_value
 ingress:
+  enabled: true
   host: dns.example.com
 ```
 
 Install the `api` chart:
 
 ```
-helm install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api-chart --values api-values.yaml
+helm upgrade --install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api-chart --values api-values.yaml
 ```
 
 #### Notes for production deployment
@@ -127,14 +129,15 @@ Create a values file named `coredns-values.yaml` with the following content:
 
 ```yaml
 # Inside coredns-values.yaml
+fullnameOverride: corewarden-coredns
 config:
-  injectorTarget: corewarden-api-corewarden-api-chart:6969
+  injectorTarget: corewarden-api:6969
 ```
 
 Install the `coredns` chart:
 
 ```
-helm install corewarden-coredns oci://ghcr.io/sneakybugs/corewarden-coredns-chart --values coredns-values.yaml
+helm upgrade --install corewarden-coredns oci://ghcr.io/sneakybugs/corewarden-coredns-chart --values coredns-values.yaml
 ```
 
 #### Notes for production deployment
@@ -154,7 +157,7 @@ service:
 Get the Service used for DNS and figure out it's external IP:
 
 ```
-kubectl get service corewarden-coredns-corewarden-coredns-chart-tcp
+kubectl get service corewarden-coredns-tcp
 ```
 
 In our case the external IP is `172.19.0.2`. Let's perform a DNS query to check it

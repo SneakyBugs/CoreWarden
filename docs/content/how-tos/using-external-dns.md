@@ -82,9 +82,11 @@ provider:
     livenessProbe:
       httpGet:
         path: /-/liveness
+        port: 8888
     readinessProbe:
       httpGet:
         path: /-/readiness
+        port: 8888
 ```
 
 Add the ExternalDNS Helm repository:

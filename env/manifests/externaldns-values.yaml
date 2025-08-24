@@ -31,8 +31,6 @@ provider:
             key: zones
       - name: WEBHOOK_VERBOSE
         value: "true"
-    # TODO
-    # resources:
     livenessProbe:
       httpGet:
         path: /-/liveness
@@ -41,5 +39,3 @@ provider:
       httpGet:
         path: /-/readiness
         port: 8888
-    # TODO
-    # serviceMonitor:
