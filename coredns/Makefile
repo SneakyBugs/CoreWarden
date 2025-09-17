@@ -1,4 +1,4 @@
-COREDNS_VERSION:=1.11.1
+COREDNS_VERSION:=1.12.4
 
 build/coredns.tar.gz:
 	mkdir build
