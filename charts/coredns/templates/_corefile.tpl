@@ -8,6 +8,9 @@
   filterlist {
     blocklists{{ range .Values.config.filter.blocklists }} {{ . }}{{ end }}
   }
+  {{- range .Values.config.forwardedZones }}
+  forward {{ .zone }}{{ range .servers }} {{ . }}{{ end }}
+  {{- end }}
   forward .{{ range .Values.config.upstream.servers }} {{ . }}{{ end }} {
     tls_servername {{ .Values.config.upstream.name }}
     health_check 5s

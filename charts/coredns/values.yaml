@@ -20,6 +20,12 @@ config:
       - tls://1.0.0.1
     name: cloudflare-dns.com
 
+  # Zones to forward to different DNS servers.
+  forwardedZones: []
+    # - zone: example.com
+    #   servers:
+    #     - 8.8.8.8
+
   # Filter lists for ad blocking.
   # Supports hosts style lists, domain lists, and adblock rule lists.
   filter:
