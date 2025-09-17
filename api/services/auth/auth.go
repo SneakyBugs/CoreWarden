@@ -7,8 +7,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var UnauthenticatedError = errors.New("unauthenticated")
-var ServerError = errors.New("server error")
+var ErrUnauthenticated = errors.New("unauthenticated")
+var ErrServer = errors.New("server error")
 
 type Authenticator interface {
 	Authenticate(w http.ResponseWriter, r *http.Request) (string, error)
@@ -27,19 +27,19 @@ func (a *ServiceAccountAuthenticator) Authenticate(w http.ResponseWriter, r *htt
 	user, pass, ok := r.BasicAuth()
 	if !ok {
 		w.Header().Add("WWW-Authenticate", "Basic realm=api")
-		return "", UnauthenticatedError
+		return "", ErrUnauthenticated
 	}
 	hash, ok := a.accounts[user]
 	if !ok {
 		w.Header().Add("WWW-Authenticate", "Basic realm=api")
-		return "", UnauthenticatedError
+		return "", ErrUnauthenticated
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(pass)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			w.Header().Add("WWW-Authenticate", "Basic realm=api")
-			return "", UnauthenticatedError
+			return "", ErrUnauthenticated
 		}
-		return "", ServerError
+		return "", ErrServer
 	}
 	return user, nil
 }

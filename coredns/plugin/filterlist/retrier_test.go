@@ -93,7 +93,7 @@ func TestRetryReachingFailureThreshold(t *testing.T) {
 		sleeper: &sleeper,
 	}
 	_, err := retrier.FetchWithRetryAndBackoff(5, time.Minute*5, 5)
-	if !errors.Is(err, FailureCountReachedError) {
+	if !errors.Is(err, ErrFailureCountReached) {
 		t.Errorf("Expected error wrapping FailureCountReachedError, but got %v", err)
 	}
 	if sleeper.SecondsWaited() != expectedWait {

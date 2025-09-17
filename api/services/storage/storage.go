@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sneakybugs/corewarden/api/database/queries"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/miekg/dns"
+	"github.com/sneakybugs/corewarden/api/database/queries"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,9 +23,9 @@ type Storage interface {
 	ListRecords(ctx context.Context, zone string) ([]Record, error)
 }
 
-var RecordNotFoundError = errors.New("record not found")
-var ServerError = errors.New("server error")
-var CNAMEArgumentError = errors.New("CNAME must be the only record at a node")
+var ErrRecordNotFound = errors.New("record not found")
+var ErrServer = errors.New("server error")
+var ErrCNAMEArgument = errors.New("CNAME must be the only record at a node")
 
 var ResolveServerError = status.Error(
 	codes.Internal,
@@ -152,7 +152,7 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 			return Record{}, err
 		}
 		if anyExist {
-			return Record{}, CNAMEArgumentError
+			return Record{}, ErrCNAMEArgument
 		}
 	} else {
 		cnameExists, err := s.queries.CNAMERecordExistsAtNode(ctx, queries.CNAMERecordExistsAtNodeParams{
@@ -163,7 +163,7 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 			return Record{}, err
 		}
 		if cnameExists {
-			return Record{}, CNAMEArgumentError
+			return Record{}, ErrCNAMEArgument
 		}
 	}
 
@@ -190,7 +190,7 @@ func (s *PostgresStorage) CreateRecord(ctx context.Context, p RecordCreateParame
 func (s *PostgresStorage) ReadRecord(ctx context.Context, id int) (Record, error) {
 	r, err := s.queries.ReadRecord(ctx, int32(id))
 	if err != nil {
-		return Record{}, RecordNotFoundError
+		return Record{}, ErrRecordNotFound
 	}
 	return Record{
 		ID:         int(r.ID),
@@ -229,7 +229,7 @@ func (s *PostgresStorage) UpdateRecord(ctx context.Context, p RecordUpdateParame
 		Comment:    p.Comment,
 	})
 	if err != nil {
-		return Record{}, RecordNotFoundError
+		return Record{}, ErrRecordNotFound
 	}
 	return Record{
 		ID:         int(r.ID),
@@ -244,7 +244,7 @@ func (s *PostgresStorage) UpdateRecord(ctx context.Context, p RecordUpdateParame
 func (s *PostgresStorage) DeleteRecord(ctx context.Context, id int) (Record, error) {
 	r, err := s.queries.DeleteRecord(ctx, int32(id))
 	if err != nil {
-		return Record{}, RecordNotFoundError
+		return Record{}, ErrRecordNotFound
 	}
 	return Record{
 		ID:         int(r.ID),
@@ -259,7 +259,7 @@ func (s *PostgresStorage) DeleteRecord(ctx context.Context, id int) (Record, err
 func (s *PostgresStorage) ListRecords(ctx context.Context, zone string) ([]Record, error) {
 	r, err := s.queries.ListRecords(ctx, zone)
 	if err != nil {
-		return []Record{}, ServerError
+		return []Record{}, ErrServer
 	}
 	records := make([]Record, len(r))
 	for i, record := range r {

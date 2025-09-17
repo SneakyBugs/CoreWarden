@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var FailureCountReachedError = fmt.Errorf("Fetch error failure count reached")
+var ErrFailureCountReached = fmt.Errorf("fetch error failure count reached")
 
 type Retrier struct {
 	fetcher Fetcher
@@ -30,7 +30,7 @@ func (r Retrier) FetchWithRetryAndBackoff(failuresUntilBackoff int, backoffWait 
 			r.sleeper.Sleep(backoffWait)
 		}
 	}
-	return "", fmt.Errorf("%w: failed %d times", FailureCountReachedError, failuresUntilError)
+	return "", fmt.Errorf("%w: failed %d times", ErrFailureCountReached, failuresUntilError)
 }
 
 type Fetcher interface {
@@ -46,7 +46,9 @@ func (f URLFetcher) Fetch() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err

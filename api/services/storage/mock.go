@@ -36,7 +36,7 @@ func (s *MockStorage) ReadRecord(ctx context.Context, id int) (Record, error) {
 			return r, nil
 		}
 	}
-	return Record{}, RecordNotFoundError
+	return Record{}, ErrRecordNotFound
 }
 
 func (s *MockStorage) UpdateRecord(ctx context.Context, p RecordUpdateParameters) (Record, error) {
@@ -49,7 +49,7 @@ func (s *MockStorage) UpdateRecord(ctx context.Context, p RecordUpdateParameters
 			return s.records[i], nil
 		}
 	}
-	return Record{}, RecordNotFoundError
+	return Record{}, ErrRecordNotFound
 }
 
 func (s *MockStorage) DeleteRecord(ctx context.Context, id int) (Record, error) {
@@ -59,7 +59,7 @@ func (s *MockStorage) DeleteRecord(ctx context.Context, id int) (Record, error) 
 			return r, nil
 		}
 	}
-	return Record{}, RecordNotFoundError
+	return Record{}, ErrRecordNotFound
 }
 
 func (s *MockStorage) ListRecords(ctx context.Context, zone string) ([]Record, error) {

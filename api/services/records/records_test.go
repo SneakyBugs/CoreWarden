@@ -51,7 +51,7 @@ func TestCreateRecord(t *testing.T) {
 }
 
 func TestCreateRecordCNAMEExistingData(t *testing.T) {
-	h := createTestHandler(storage.CNAMEArgumentError)
+	h := createTestHandler(storage.ErrCNAMEArgument)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		http.MethodPost,

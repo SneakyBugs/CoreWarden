@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var GRPCLoggerError = errors.New("gRPC logger error")
+var ErrGRPCLogger = errors.New("gRPC logger error")
 
 func LoggerInterceptor(l *zap.Logger) grpc.UnaryServerInterceptor {
 	return func(
@@ -23,7 +23,7 @@ func LoggerInterceptor(l *zap.Logger) grpc.UnaryServerInterceptor {
 	) (resp any, err error) {
 		p, ok := peer.FromContext(ctx)
 		if !ok {
-			return nil, GRPCLoggerError
+			return nil, ErrGRPCLogger
 		}
 		start := time.Now()
 		defer func() {

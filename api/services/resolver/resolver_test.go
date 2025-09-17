@@ -104,9 +104,8 @@ func createTestClient(t *testing.T, returnError error) (resolver.ResolverClient,
 		app.Run()
 	}()
 
-	conn, err := grpc.DialContext(
-		context.Background(),
-		"",
+	conn, err := grpc.NewClient(
+		"127.0.0.1",
 		grpc.WithContextDialer(
 			func(ctx context.Context, s string) (net.Conn, error) {
 				return lis.Dial()
@@ -123,6 +122,6 @@ func createTestClient(t *testing.T, returnError error) (resolver.ResolverClient,
 		if err != nil {
 			fmt.Printf("%v\n", err)
 		}
-		lis.Close()
+		_ = lis.Close()
 	}
 }

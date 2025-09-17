@@ -11,11 +11,10 @@ import (
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
 	"sigs.k8s.io/external-dns/provider"
-	eprovider "sigs.k8s.io/external-dns/provider"
 )
 
 type Provider struct {
-	eprovider.BaseProvider
+	provider.BaseProvider
 	client client.Client
 	zones  []string
 	logger *zap.Logger
@@ -30,7 +29,7 @@ type Configuration struct {
 	Logger *zap.Logger
 }
 
-func NewProvider(config *Configuration) (eprovider.Provider, error) {
+func NewProvider(config *Configuration) (provider.Provider, error) {
 	c := client.NewClient(client.ClientOptions{
 		APIEndpoint: config.APIEndpoint,
 		ID:          config.ID,
@@ -67,7 +66,7 @@ func splitToZoneAndName(domain string, managedZones []string) (string, string, e
 			return zone, strings.Join(labels[:len(labels)-commonLabels], "."), nil
 		}
 	}
-	return "", "", fmt.Errorf("Domains being split must be subdomains of zones in managedZones")
+	return "", "", fmt.Errorf("domains being split must be subdomains of zones in managedZones")
 }
 
 func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
@@ -111,7 +110,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 		// No more updates to perform, avoid listing records.
 		p.logger.Debug("No changes in changes.UpdateNew")
 		if 0 < len(errors) {
-			return fmt.Errorf("Encountered %d recoverable errors", len(errors))
+			return fmt.Errorf("encountered %d recoverable errors", len(errors))
 		}
 		return nil
 	}
@@ -244,7 +243,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 		}
 	}
 	if 0 < len(errors) {
-		return fmt.Errorf("Encountered %d recoverable errors", len(errors))
+		return fmt.Errorf("encountered %d recoverable errors", len(errors))
 	}
 	return nil
 }

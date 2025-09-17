@@ -55,8 +55,8 @@ func TestCreateCNAMEWhenCannot(t *testing.T) {
 		RR:      toRRString(t, "foo 3600 IN CNAME bar.example.com."),
 		Comment: "test",
 	})
-	if err != CNAMEArgumentError {
-		t.Fatalf("Expected an error '%v', got '%v'\n", CNAMEArgumentError, err)
+	if err != ErrCNAMEArgument {
+		t.Fatalf("Expected an error '%v', got '%v'\n", ErrCNAMEArgument, err)
 	}
 }
 
@@ -78,8 +78,8 @@ func TestCreateRecordWhenCnameExists(t *testing.T) {
 		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
-	if err != CNAMEArgumentError {
-		t.Fatalf("Expected an error '%v', got '%v'\n", CNAMEArgumentError, err)
+	if err != ErrCNAMEArgument {
+		t.Fatalf("Expected an error '%v', got '%v'\n", ErrCNAMEArgument, err)
 	}
 }
 
@@ -116,7 +116,7 @@ func TestReadRecordNotFound(t *testing.T) {
 	ctx := context.Background()
 	defer closer(ctx)
 	_, err := s.ReadRecord(ctx, 1337)
-	if !errors.Is(err, RecordNotFoundError) {
+	if !errors.Is(err, ErrRecordNotFound) {
 		t.Fatalf("expected record not found error, got %v\n", err)
 	}
 }
@@ -164,7 +164,7 @@ func TestUpdateRecordNotFound(t *testing.T) {
 		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
 		Comment: "test",
 	})
-	if !errors.Is(err, RecordNotFoundError) {
+	if !errors.Is(err, ErrRecordNotFound) {
 		t.Fatalf("expected record not found error, got %v\n", err)
 	}
 }
@@ -196,8 +196,8 @@ func TestDeleteRecord(t *testing.T) {
 		t.Fatalf("expected comment to be 'test', got '%s'", deleteResult.Comment)
 	}
 	_, err = s.ReadRecord(ctx, createResult.ID)
-	if !errors.Is(err, RecordNotFoundError) {
-		t.Fatalf("expected error %v, got %v\n", RecordNotFoundError, err)
+	if !errors.Is(err, ErrRecordNotFound) {
+		t.Fatalf("expected error %v, got %v\n", ErrRecordNotFound, err)
 	}
 }
 
@@ -206,7 +206,7 @@ func TestDeleteRecordNotFound(t *testing.T) {
 	ctx := context.Background()
 	defer closer(ctx)
 	_, err := s.DeleteRecord(ctx, 1337)
-	if !errors.Is(err, RecordNotFoundError) {
+	if !errors.Is(err, ErrRecordNotFound) {
 		t.Fatalf("expected record not found error, got %v\n", err)
 	}
 }

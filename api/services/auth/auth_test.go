@@ -52,8 +52,8 @@ func TestServiceAccountAuthBadUsername(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.SetBasicAuth("bar", "test")
 	_, err = a.Authenticate(w, r)
-	if err != UnauthenticatedError {
-		t.Fatalf("expected %v error, got %v", UnauthenticatedError, err)
+	if err != ErrUnauthenticated {
+		t.Fatalf("expected %v error, got %v", ErrUnauthenticated, err)
 	}
 }
 
@@ -75,7 +75,7 @@ func TestServiceAccountAuthBadPassword(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.SetBasicAuth("foo", "wrong")
 	_, err = a.Authenticate(w, r)
-	if err != UnauthenticatedError {
-		t.Fatalf("expected %v error, got %v", UnauthenticatedError, err)
+	if err != ErrUnauthenticated {
+		t.Fatalf("expected %v error, got %v", ErrUnauthenticated, err)
 	}
 }

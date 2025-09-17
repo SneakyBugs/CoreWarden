@@ -1,12 +1,12 @@
 package injector
 
 import (
-	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
-	"github.com/sneakybugs/corewarden/coredns/plugin/slog"
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/upstream"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
+	"github.com/sneakybugs/corewarden/coredns/plugin/slog"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -43,7 +43,7 @@ func setup(c *caddy.Controller) error {
 		logger = zap.NewNop()
 	}
 
-	conn, err := grpc.Dial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return plugin.Error(name, err)
 	}

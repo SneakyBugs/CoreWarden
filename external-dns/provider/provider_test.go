@@ -502,7 +502,7 @@ func TestNewEndpointRecoverableError(t *testing.T) {
 		},
 	}
 	err := assertActionsE(t, endpoints, actions, []string{endpoint.RecordTypeA, endpoint.RecordTypeCNAME})
-	assert.ErrorContains(t, err, "Encountered 1 recoverable errors")
+	assert.ErrorContains(t, err, "encountered 1 recoverable errors")
 }
 
 func TestUpdatedEndpointRecoverableError(t *testing.T) {
@@ -552,7 +552,7 @@ func TestUpdatedEndpointRecoverableError(t *testing.T) {
 		},
 	}
 	err := assertActionsE(t, endpoints, actions, []string{endpoint.RecordTypeA, endpoint.RecordTypeCNAME})
-	assert.ErrorContains(t, err, "Encountered 1 recoverable errors")
+	assert.ErrorContains(t, err, "encountered 1 recoverable errors")
 }
 
 func TestRecordsBasic(t *testing.T) {

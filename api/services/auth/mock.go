@@ -10,11 +10,11 @@ const testErrorHeader = "X-Test-Error"
 func (a *MockAuthenticator) Authenticate(w http.ResponseWriter, r *http.Request) (string, error) {
 	msg := r.Header.Get(testErrorHeader)
 	if msg != "" {
-		return "", ServerError
+		return "", ErrServer
 	}
 	sub := r.Header.Get(testSubjectHeader)
 	if sub == "" {
-		return "", UnauthenticatedError
+		return "", ErrUnauthenticated
 	}
 	return sub, nil
 }

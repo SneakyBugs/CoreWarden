@@ -15,7 +15,7 @@ type Action string
 const ReadAction Action = "read"
 const EditAction Action = "edit"
 
-var ServerError = errors.New("server error")
+var ErrServer = errors.New("server error")
 
 type Enforcer interface {
 	Enforce(sub string, obj string, zone string, act Action) (bool, error)

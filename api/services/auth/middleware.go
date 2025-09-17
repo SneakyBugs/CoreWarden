@@ -18,7 +18,7 @@ func (s *Service) Middleware() func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			sub, err := s.authenticator.Authenticate(w, r)
 			if err != nil {
-				if errors.Is(err, UnauthenticatedError) {
+				if errors.Is(err, ErrUnauthenticated) {
 					s.logger.Error("failed to authenticate", zap.Error(err))
 					rest.RenderError(w, r, &rest.UnauthorizedError)
 					return

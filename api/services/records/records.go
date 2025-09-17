@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sneakybugs/corewarden/api/services/rest"
-	"github.com/sneakybugs/corewarden/api/services/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/miekg/dns"
+	"github.com/sneakybugs/corewarden/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/storage"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,7 @@ func (s service) HandleCreate() http.HandlerFunc {
 			Comment: data.Comment,
 		})
 		if err != nil {
-			if errors.Is(err, storage.CNAMEArgumentError) {
+			if errors.Is(err, storage.ErrCNAMEArgument) {
 				s.logger.Error("failed to create CNAME record because data exists in node", zap.String("zone", data.Zone), zap.String("rr", data.RR.String()))
 				rest.RenderError(w, r, &rest.BadRequestErrorResponse{
 					Fields: []rest.KeyError{
@@ -145,7 +145,7 @@ func (s service) HandleRead() http.HandlerFunc {
 		rec, err := s.handler.ReadRecord(r.Context(), parsedID)
 		if err != nil {
 			s.logger.Error("failed to read record", zap.Error(err))
-			if errors.Is(err, storage.RecordNotFoundError) {
+			if errors.Is(err, storage.ErrRecordNotFound) {
 				rest.RenderError(w, r, &rest.NotFoundError)
 				return
 			}
@@ -213,7 +213,7 @@ func (s service) HandleUpdate() http.HandlerFunc {
 		existingRecord, err := s.handler.ReadRecord(r.Context(), parsedID)
 		if err != nil {
 			s.logger.Error("failed to read record", zap.Error(err))
-			if errors.Is(err, storage.RecordNotFoundError) {
+			if errors.Is(err, storage.ErrRecordNotFound) {
 				rest.RenderError(w, r, &rest.NotFoundError)
 				return
 			}
@@ -274,7 +274,7 @@ func (s service) HandleDelete() http.HandlerFunc {
 		existingRecord, err := s.handler.ReadRecord(r.Context(), parsedID)
 		if err != nil {
 			s.logger.Error("failed to read record", zap.Error(err))
-			if errors.Is(err, storage.RecordNotFoundError) {
+			if errors.Is(err, storage.ErrRecordNotFound) {
 				rest.RenderError(w, r, &rest.NotFoundError)
 				return
 			}
