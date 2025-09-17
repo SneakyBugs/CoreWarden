@@ -10,7 +10,7 @@ lint:golangci:
 
 gen:sqlc:
   stage: validate
-  image: golang:1.22.4-bookworm
+  image: golang:1.25.1-bookworm
   script:
     - wget -O /tmp/sqlc.tar.gz https://github.com/sqlc-dev/sqlc/releases/download/v1.24.0/sqlc_1.24.0_linux_amd64.tar.gz
     - tar -xzf /tmp/sqlc.tar.gz
@@ -20,7 +20,7 @@ gen:sqlc:
 
 gen:protoc:
   stage: validate
-  image: golang:1.22.4-bookworm
+  image: golang:1.25.1-bookworm
   script:
     - apt-get update
     - apt-get install --yes protobuf-compiler
@@ -33,7 +33,7 @@ gen:protoc:
 
 test:unit:
   stage: validate
-  image: golang:1.22.4-bookworm
+  image: golang:1.25.1-bookworm
   variables:
     POSTGRES_DB: "development"
     POSTGRES_USER: "development"
@@ -51,7 +51,7 @@ test:unit:
 
 test:e2e:
   stage: validate
-  image: golang:1.22.4-bookworm
+  image: golang:1.25.1-bookworm
   script:
     - apt-get update
     - apt-get install --yes dnsutils

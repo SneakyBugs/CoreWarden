@@ -9,6 +9,7 @@ import (
 
 	"github.com/AdguardTeam/urlfilter"
 	agfilter "github.com/AdguardTeam/urlfilter/filterlist"
+	"github.com/AdguardTeam/urlfilter/rules"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
@@ -50,7 +51,7 @@ func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 		requestsBlocked.Add(1)
 		fl.Logger.Info("request blocked",
 			zap.String("name", state.Name()),
-			zap.Int("blocklist", listID),
+			zap.Uint64("blocklist", listID),
 		)
 		return m.Rcode, w.WriteMsg(m)
 
@@ -60,31 +61,31 @@ func (fl FilterList) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 	return plugin.NextOrFailure(fl.Name(), fl.Next, ctx, w, r)
 }
 
-func getMatchingListID(result *urlfilter.DNSResult) (int, bool) {
+func getMatchingListID(result *urlfilter.DNSResult) (uint64, bool) {
 	if result.NetworkRule != nil {
-		return result.NetworkRule.FilterListID, true
+		return uint64(result.NetworkRule.GetFilterListID()), true
 	}
 	if result.HostRulesV4 != nil {
-		return result.HostRulesV4[0].FilterListID, true
+		return uint64(result.HostRulesV4[0].GetFilterListID()), true
 	}
 	if result.HostRulesV6 != nil {
-		return result.HostRulesV6[0].FilterListID, true
+		return uint64(result.HostRulesV6[0].GetFilterListID()), true
 	}
-	return -1, false
+	return 0, false
 }
 
 func (fl FilterList) Name() string {
 	return name
 }
 
-func CreateEngine(rules []string) (*urlfilter.DNSEngine, error) {
-	ruleLists := []agfilter.RuleList{}
-	for i, ruleList := range rules {
-		ruleLists = append(ruleLists, &agfilter.StringRuleList{
+func CreateEngine(ruleContents []string) (*urlfilter.DNSEngine, error) {
+	ruleLists := []agfilter.Interface{}
+	for i, ruleList := range ruleContents {
+		ruleLists = append(ruleLists, agfilter.NewString(&agfilter.StringConfig{
 			RulesText:      ruleList,
-			ID:             i,
+			ID:             rules.ListID(i),
 			IgnoreCosmetic: true,
-		})
+		}))
 	}
 	ruleStorage, err := agfilter.NewRuleStorage(ruleLists)
 	if err != nil {
