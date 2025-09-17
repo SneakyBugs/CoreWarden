@@ -73,9 +73,12 @@ resource "kubernetes_secret" "postgres_credentials" {
 }
 
 resource "helm_release" "traefik" {
-  name       = "traefik"
-  repository = "oci://ghcr.io/traefik/helm"
-  chart      = "traefik"
+  name             = "traefik"
+  repository       = "oci://ghcr.io/traefik/helm"
+  chart            = "traefik"
+  namespace        = "traefik-system"
+  create_namespace = true
+  wait             = true
 
   set {
     name  = "providers.kubernetesGateway.enabled"
@@ -83,21 +86,34 @@ resource "helm_release" "traefik" {
   }
 }
 
-resource "helm_release" "database" {
-  name       = "postgres"
-  repository = "oci://registry-1.docker.io/bitnamicharts"
-  chart      = "postgresql"
+resource "helm_release" "cloudnative_pg" {
+  name             = "cloudnative-pg"
+  repository       = "https://cloudnative-pg.github.io/charts"
+  chart            = "cloudnative-pg"
+  namespace        = "cnpg-system"
+  create_namespace = true
+  wait             = true
+}
 
-  set {
-    name  = "auth.existingSecret"
-    value = "postgres-credentials"
-  }
-  set {
-    name  = "auth.username"
-    value = "development"
-  }
-  set {
-    name  = "auth.database"
-    value = "development"
-  }
+resource "helm_release" "pg" {
+  depends_on = [helm_release.cloudnative_pg]
+  name       = "corewarden"
+  repository = "https://cloudnative-pg.github.io/charts"
+  chart      = "cluster"
+  wait       = true
+  values = [
+    <<EOF
+cluster:
+  initdb:
+    database: corewarden
+  instances: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "250m"
+      memory: "512Mi"
+EOF
+  ]
 }

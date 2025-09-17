@@ -11,11 +11,11 @@ config:
     - id: alice
       secretHash: $2a$10$jjolj440dNTg3ZdgjXKJ2ODhE3zF6nWm.HVBTbD09OF75wrSWAQiy
   postgres:
-    host: postgres-postgresql
+    host: corewarden-cluster-rw
     port: 5432
     user: change-me
     password: change-me
-    database: postgres
+    database: corewarden
     existingSecret:
       # Set name to use existing secret.
       # name: example-secret
