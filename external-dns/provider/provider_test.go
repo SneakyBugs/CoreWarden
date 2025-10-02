@@ -657,4 +657,34 @@ func TestRecordsTXTRecordTarget(t *testing.T) {
 	assert.Equal(t, 1, len(endpoints), "endpoints length should be 2")
 	assert.Equal(t, 1, len(endpoints[0].Targets), "endpoints[0].Targets length should be 2")
 	assert.Equal(t, "Hello\nworld\tsome\rmore spacenospacebetween", endpoints[0].Targets[0])
+	assert.Equal(t, "TXT", endpoints[0].RecordType)
+}
+
+func TestRecordsWithTXTAndARecordsTogether(t *testing.T) {
+	state := []client.Record{
+		createTestRecord(t, 76, "sneakybugs.com.", "otel.infra.\t0\tIN\tA\t10.10.0.5", ""),
+		createTestRecord(t, 77, "sneakybugs.com.", "a-otel.infra.\t0\tIN\tTXT\t\"heritage=external-dns,external-dns/owner=default,external-dns/resource=service/telemetry-system/telemetry-system-components-collector-ingress\"", ""),
+	}
+	p := newTestProvider(
+		t,
+		[]MockClientAction{
+			{
+				action: ListRecordAction{
+					Zone:            "example.com.",
+					ResponseRecords: state,
+					ResponseErr:     nil,
+				},
+				stateAfter: state,
+			},
+		},
+	)
+	endpoints, err := p.Records(context.TODO())
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(endpoints), "endpoints length should be 2")
+	assert.Equal(t, 1, len(endpoints[0].Targets), "endpoints[0].Targets length should be 1")
+	assert.Equal(t, "10.10.0.5", endpoints[0].Targets[0])
+	assert.Equal(t, "A", endpoints[0].RecordType)
+	assert.Equal(t, 1, len(endpoints[1].Targets), "endpoints[1].Targets length should be 1")
+	assert.Equal(t, "heritage=external-dns,external-dns/owner=default,external-dns/resource=service/telemetry-system/telemetry-system-components-collector-ingress", endpoints[1].Targets[0])
+	assert.Equal(t, "TXT", endpoints[1].RecordType)
 }
