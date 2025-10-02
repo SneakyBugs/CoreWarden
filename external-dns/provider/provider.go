@@ -319,13 +319,13 @@ func groupByNameAndType(records []client.Record) []*endpoint.Endpoint {
 		for i, record := range groupRecords {
 			targets[i] = rrToTarget(record.RR)
 		}
-		rtype := dns.Type(records[0].RR.Header().Rrtype).String()
+		rtype := dns.Type(groupRecords[0].RR.Header().Rrtype).String()
 		endpoints = append(
 			endpoints,
 			endpoint.NewEndpointWithTTL(
 				formatName(groupRecords[0].Zone, groupRecords[0].RR),
 				rtype,
-				endpoint.TTL(records[0].RR.Header().Ttl),
+				endpoint.TTL(groupRecords[0].RR.Header().Ttl),
 				targets...))
 	}
 	return endpoints
