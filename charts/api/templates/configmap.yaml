@@ -10,8 +10,8 @@ data:
     {{- .Values.config.policies | nindent 4 }}
   dns-api.yaml: |-
     {{- with .Values.config.serviceAccounts }}
-    {{- range . }}
     service-accounts:
+    {{- range . }}
       - id: {{ quote .id }}
         secret-hash: {{ quote .secretHash }}
     {{- end }}
