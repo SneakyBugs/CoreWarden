@@ -5,6 +5,7 @@ import (
 
 	"github.com/sneakybugs/corewarden/api/resolver"
 	"github.com/sneakybugs/corewarden/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/zones"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -15,13 +16,19 @@ type service struct {
 	resolver.UnimplementedResolverServer
 	handler Resolver
 	logger  *zap.Logger
+	zones   []string
 }
 
-func Register(e *grpc.Server, s storage.Storage, l *zap.Logger) {
+func Register(e *grpc.Server, s storage.Storage, o zones.Options, l *zap.Logger) {
 	resolver.RegisterResolverServer(e, &service{
 		handler: s,
 		logger:  l,
+		zones:   zones.Canonical(o.Zones),
 	})
+}
+
+func (s *service) ListZones(ctx context.Context, _ *resolver.ListZonesRequest) (*resolver.ListZonesResponse, error) {
+	return &resolver.ListZonesResponse{Zones: s.zones}, nil
 }
 
 func (s *service) Resolve(ctx context.Context, q *resolver.Question) (*resolver.Response, error) {

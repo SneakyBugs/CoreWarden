@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/sneakybugs/corewarden/api/services/records"
 	"github.com/sneakybugs/corewarden/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/zones"
 	"github.com/miekg/dns"
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
@@ -493,6 +495,59 @@ func TestListRecordsUnauthorized(t *testing.T) {
 	}
 	if apiErr.message != "unauthorized" {
 		t.Fatalf("Expected message to be 'unauthorized', got %s\n", apiErr.message)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestListZones(t *testing.T) {
+	w := httptest.NewRecorder()
+	if err := json.NewEncoder(w).Encode(zones.ZonesResponse{Zones: []string{"example.com."}}); err != nil {
+		t.Fatalf("error encoding zones response: %v\n", err)
+	}
+	m := MockHTTPClient{
+		Response: w.Result(),
+		Error:    nil,
+	}
+	c := APIClient{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	z, err := c.ListZones()
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if !slices.Equal(z, []string{"example.com."}) {
+		t.Errorf("Expected zones [example.com.], got %v\n", z)
+	}
+	validateRequest(t, m.LastRequest)
+}
+
+func TestListZonesUnauthorized(t *testing.T) {
+	m := MockAPIErrorHTTPClient{
+		Error: &rest.UnauthorizedError,
+	}
+	c := APIClient{
+		httpClient: &m,
+		endpoint:   "https://localhost:3080/v1",
+		credentials: Credentials{
+			ClientID:     "example",
+			ClientSecret: "secret",
+		},
+	}
+	_, err := c.ListZones()
+	if err == nil {
+		t.Fatalf("Expected an error, got nil\n")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("Expected err to be an APIError\n")
+	}
+	if apiErr.status != http.StatusUnauthorized {
+		t.Fatalf("Expected status to be %d, got %d\n", http.StatusUnauthorized, apiErr.status)
 	}
 	validateRequest(t, m.LastRequest)
 }

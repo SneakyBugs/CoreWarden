@@ -2,10 +2,14 @@ package injector
 
 import (
 	"context"
+	"errors"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/zones"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/coredns/coredns/request"
@@ -33,6 +37,7 @@ func TestInjector(t *testing.T) {
 	})
 	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client: &r,
 		logger: zap.NewNop(),
 		next:   &h,
@@ -96,6 +101,7 @@ func TestForwardWhenNotFound(t *testing.T) {
 		},
 	})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client: &r,
 		logger: zap.NewNop(),
 		next:   &h,
@@ -129,6 +135,7 @@ func TestUnknownError(t *testing.T) {
 	})
 	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client: &r,
 		logger: zap.NewNop(),
 		next:   &h,
@@ -168,6 +175,7 @@ func TestInvalidAnswerRR(t *testing.T) {
 	})
 	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client: &r,
 		logger: zap.NewNop(),
 		next:   &h,
@@ -204,6 +212,7 @@ func TestInvalidNsRR(t *testing.T) {
 	})
 	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client: &r,
 		logger: zap.NewNop(),
 		next:   &h,
@@ -239,6 +248,7 @@ func TestInvalidExtraRR(t *testing.T) {
 	})
 	h := NewMockHandler(t, []MockHandlerAction{})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client: &r,
 		logger: zap.NewNop(),
 		next:   &h,
@@ -287,6 +297,7 @@ func TestCname(t *testing.T) {
 		},
 	})
 	i := Injector{
+		zones: newTestZones("example.com."),
 		client:   &r,
 		logger:   zap.NewNop(),
 		next:     &h,
@@ -400,6 +411,15 @@ type MockResolver struct {
 	actions      []MockResolverAction
 	t            *testing.T
 	currentIndex int
+	zones        []string
+	zonesErr     error
+}
+
+func (r *MockResolver) ListZones(ctx context.Context, in *resolver.ListZonesRequest, opts ...grpc.CallOption) (*resolver.ListZonesResponse, error) {
+	if r.zonesErr != nil {
+		return nil, r.zonesErr
+	}
+	return &resolver.ListZonesResponse{Zones: r.zones}, nil
 }
 
 func NewMockResolver(t *testing.T, actions []MockResolverAction) MockResolver {
@@ -435,6 +455,144 @@ func (r *MockResolver) Resolve(ctx context.Context, in *resolver.Question, opts 
 func (r *MockResolver) AssertDone() {
 	if r.currentIndex != len(r.actions) {
 		r.t.Fatalf("Expected client to call all mock actions, called %d out of %d method calls\n", r.currentIndex, len(r.actions))
+	}
+}
+
+func newTestZones(enabled ...string) *zones.Cache {
+	return zones.NewCache(zones.ProviderFunc(func(context.Context) ([]string, error) {
+		return enabled, nil
+	}), time.Minute)
+}
+
+func TestForwardWhenZoneNotEnabled(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{})
+	req := new(dns.Msg)
+	req.SetQuestion(dns.Fqdn("example.net"), dns.TypeA)
+	h := NewMockHandler(t, []MockHandlerAction{
+		{
+			In:    *req,
+			Out:   *new(dns.Msg),
+			Rcode: dns.RcodeSuccess,
+		},
+	})
+	i := Injector{
+		client: &r,
+		zones:  newTestZones("example.com."),
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	if _, err := i.ServeDNS(context.Background(), rec, req); err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
+func TestInjectorSubdomainOfZone(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "foo.example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
+				Answer: []string{"foo.example.com. IN A 127.0.0.1"},
+			},
+		},
+	})
+	h := NewMockHandler(t, []MockHandlerAction{})
+	i := Injector{
+		client: &r,
+		zones:  newTestZones("example.com."),
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	req := new(dns.Msg)
+	req.SetQuestion(dns.Fqdn("foo.example.com"), dns.TypeA)
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	if _, err := i.ServeDNS(context.Background(), rec, req); err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
+func TestInjectorZoneCaseInsensitive(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In: &resolver.Question{
+				Name:  "foo.example.com.",
+				Qtype: uint32(dns.TypeA),
+			},
+			Result: &resolver.Response{
+				Answer: []string{"foo.example.com. IN A 127.0.0.1"},
+			},
+		},
+	})
+	h := NewMockHandler(t, []MockHandlerAction{})
+	i := Injector{
+		client: &r,
+		zones:  newTestZones("example.com."),
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	req := new(dns.Msg)
+	req.SetQuestion("FOO.Example.COM.", dns.TypeA)
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	if _, err := i.ServeDNS(context.Background(), rec, req); err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
+func TestForwardWhenZonesUnavailable(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{})
+	req := new(dns.Msg)
+	req.SetQuestion(dns.Fqdn("example.com"), dns.TypeA)
+	h := NewMockHandler(t, []MockHandlerAction{
+		{
+			In:    *req,
+			Out:   *new(dns.Msg),
+			Rcode: dns.RcodeSuccess,
+		},
+	})
+	i := Injector{
+		client: &r,
+		zones: zones.NewCache(zones.ProviderFunc(func(context.Context) ([]string, error) {
+			return nil, errors.New("api unreachable")
+		}), time.Minute),
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	if _, err := i.ServeDNS(context.Background(), rec, req); err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
+func TestGRPCProviderZones(t *testing.T) {
+	r := NewMockResolver(t, []MockResolverAction{})
+	r.zones = []string{"example.com.", "example.net."}
+	p := grpcProvider{client: &r}
+	zones, err := p.Zones(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v\n", err)
+	}
+	if !slices.Equal(zones, []string{"example.com.", "example.net."}) {
+		t.Errorf("Unexpected zones: %v\n", zones)
+	}
+
+	r.zonesErr = status.Error(codes.Unavailable, "unavailable")
+	if _, err = p.Zones(context.Background()); status.Code(err) != codes.Unavailable {
+		t.Errorf("Expected unavailable error, got %v\n", err)
 	}
 }
 

@@ -89,9 +89,12 @@ Create a values file named `api-values.yaml` with the following content:
 # Inside api-values.yaml
 fullnameOverride: corewarden-api
 config:
+  zones:
+    - example.com
   policies: |-
     p, tutorial, records, example.com., edit
     p, tutorial, records, example.com., read
+    p, tutorial, zones, example.com., read
   serviceAccounts:
     # tutorial:example
     - id: tutorial

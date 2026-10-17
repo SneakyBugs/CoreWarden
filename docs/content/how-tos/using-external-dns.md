@@ -8,12 +8,14 @@ After following this guide, you will be able to dynamically set DNS records for 
 ## Requirements
 
 1. DNS server running and set as your computer's primary DNS.
-1. Service account for the DNS API server with read and write permissions for the zone you want to manage records in.
+1. Service account for the DNS API server with `zones` read, and `records` read and edit permissions for the zone you want to manage records in.
 1. Access to a Kubernetes cluster. Does not have to be the same cluster running the DNS server. `kind` or `k3d` may be used for evaluation purposes.
 
 ## Setting up ExternalDNS
 
-Start by editing the following `ConfigMap` and `Secret` to fit your DNS API server endpoint, zones, and service account.
+Start by editing the following `ConfigMap` and `Secret` to fit your DNS API server endpoint and service account.
+The webhook discovers the zones it manages from the [`zones` option]({{< relref "../reference/configuration#zones" >}}) of the DNS API server, make sure it lists the zones you want to manage.
+The webhook only manages zones the service account has `zones` read policy for, and needs `records` read and edit on them.
 
 ```yaml
 # Inside config.yml
@@ -30,7 +32,6 @@ metadata:
   namespace: external-dns
 data:
   apiEndpoint: http://api.default:6970/v1
-  zones: example.com.
 ---
 apiVersion: v1
 kind: Secret
@@ -74,11 +75,6 @@ provider:
           secretKeyRef:
             name: webhook-credentials
             key: secret
-      - name: WEBHOOK_ZONES
-        valueFrom:
-          configMapKeyRef:
-            name: webhook
-            key: zones
     livenessProbe:
       httpGet:
         path: /-/liveness
@@ -106,6 +102,10 @@ ExternalDNS is now ready to use. Make sure the ExternalDNS pod is up and running
 ```
 kubectl get pods -n external-dns
 ```
+
+The `WEBHOOK_ZONES` setting and `--zones` flag were removed.
+Remove them from existing deployments.
+Zones are cached for 30 seconds by default, change it with `--zones-ttl` or `WEBHOOK_ZONES_TTL`.
 
 ## Checking it out
 

@@ -2,12 +2,14 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/miekg/dns"
 	"github.com/sneakybugs/corewarden/client"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/zones"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"sigs.k8s.io/external-dns/endpoint"
@@ -162,9 +164,15 @@ func newTestProvider(t *testing.T, actions []MockClientAction) Provider {
 	}
 	return Provider{
 		client: &mockClient,
-		zones:  []string{"example.com."},
+		zones:  mockZones("example.com."),
 		logger: l,
 	}
+}
+
+func mockZones(enabled ...string) zones.Provider {
+	return zones.ProviderFunc(func(context.Context) ([]string, error) {
+		return enabled, nil
+	})
 }
 
 func (c *MockClient) IsFinished() bool {
@@ -687,4 +695,78 @@ func TestRecordsWithTXTAndARecordsTogether(t *testing.T) {
 	assert.Equal(t, 1, len(endpoints[1].Targets), "endpoints[1].Targets length should be 1")
 	assert.Equal(t, "heritage=external-dns,external-dns/owner=default,external-dns/resource=service/telemetry-system/telemetry-system-components-collector-ingress", endpoints[1].Targets[0])
 	assert.Equal(t, "TXT", endpoints[1].RecordType)
+}
+
+func TestRecordsUsesDiscoveredZones(t *testing.T) {
+	p := newTestProvider(
+		t,
+		[]MockClientAction{
+			{
+				action: ListRecordAction{
+					Zone:            "example.net.",
+					ResponseRecords: []client.Record{createTestRecord(t, 1, "example.net.", "foo 0 IN A 10.0.0.1", "")},
+				},
+			},
+			{
+				action: ListRecordAction{
+					Zone:            "example.org.",
+					ResponseRecords: []client.Record{},
+				},
+			},
+		},
+	)
+	p.zones = mockZones("example.net.", "example.org.")
+	endpoints, err := p.Records(context.TODO())
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(endpoints), "endpoints length should be 1")
+	assert.Equal(t, "foo.example.net", endpoints[0].DNSName)
+	assertMockFinished(t, p.client)
+}
+
+func TestApplyChangesUsesDiscoveredZones(t *testing.T) {
+	p := newTestProvider(
+		t,
+		[]MockClientAction{
+			{
+				action: CreateRecordAction{
+					Zone:           "example.net.",
+					RR:             "foo.\t0\tIN\tA\t10.0.0.1",
+					ResponseRecord: createTestRecord(t, 1, "example.net.", "foo 0 IN A 10.0.0.1", ""),
+				},
+			},
+		},
+	)
+	p.zones = mockZones("example.net.")
+	err := p.ApplyChanges(context.TODO(), &plan.Changes{
+		Create: []*endpoint.Endpoint{
+			{
+				RecordType: "A",
+				DNSName:    "foo.example.net",
+				Targets:    endpoint.Targets{"10.0.0.1"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+	assertMockFinished(t, p.client)
+}
+
+func TestZoneDiscoveryError(t *testing.T) {
+	p := newTestProvider(t, []MockClientAction{})
+	boom := errors.New("boom")
+	p.zones = zones.ProviderFunc(func(context.Context) ([]string, error) {
+		return nil, boom
+	})
+	_, err := p.Records(context.TODO())
+	assert.ErrorIs(t, err, boom)
+	err = p.ApplyChanges(context.TODO(), &plan.Changes{
+		Create: []*endpoint.Endpoint{
+			{
+				RecordType: "A",
+				DNSName:    "foo.example.com",
+				Targets:    endpoint.Targets{"10.0.0.1"},
+			},
+		},
+	})
+	assert.ErrorIs(t, err, boom)
+	assertMockFinished(t, p.client)
 }

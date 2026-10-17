@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/zones"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
@@ -17,6 +18,7 @@ const name = "injector"
 type Injector struct {
 	client   resolver.ResolverClient
 	upstream Upstream
+	zones    *zones.Cache
 	logger   *zap.Logger
 	next     plugin.Handler
 }
@@ -35,6 +37,14 @@ func (i *Injector) Ready() bool {
 
 func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
+	discovered, err := i.zones.Zones(ctx)
+	if err != nil {
+		i.logger.Error("failed to discover zones", zap.Error(err))
+	}
+	if !inZones(discovered, state.Name()) {
+		return plugin.NextOrFailure(i.Name(), i.next, ctx, w, r)
+	}
+
 	res, err := i.client.Resolve(ctx, &resolver.Question{
 		Name:  state.Name(),
 		Qtype: uint32(state.QType()),

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 	"github.com/sneakybugs/corewarden/client"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/zones"
 	"go.uber.org/zap"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
@@ -16,7 +18,7 @@ import (
 type Provider struct {
 	provider.BaseProvider
 	client client.Client
-	zones  []string
+	zones  zones.Provider
 	logger *zap.Logger
 }
 
@@ -24,9 +26,8 @@ type Configuration struct {
 	APIEndpoint string `env:"CLIENT_API_ENDPOINT"`
 	ID          string `env:"CLIENT_ID"`
 	Secret      string `env:"CLIENT_SECRET"`
-	// Comma-separated list of zones to manage records in.
-	Zones  string `env:"CLIENT_ZONES"`
-	Logger *zap.Logger
+	ZonesTTL    time.Duration
+	Logger      *zap.Logger
 }
 
 func NewProvider(config *Configuration) (provider.Provider, error) {
@@ -37,14 +38,22 @@ func NewProvider(config *Configuration) (provider.Provider, error) {
 	})
 	return &Provider{
 		client: &c,
-		zones:  strings.Split(config.Zones, ","),
+		zones: zones.NewCache(
+			zones.ProviderFunc(func(context.Context) ([]string, error) { return c.ListZones() }),
+			config.ZonesTTL,
+		),
 		logger: config.Logger,
 	}, nil
 }
 
 func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
+	managedZones, err := p.zones.Zones(ctx)
+	if err != nil {
+		p.logger.Error("Error discovering zones", zap.Error(err))
+		return nil, err
+	}
 	records := []client.Record{}
-	for _, zone := range p.zones {
+	for _, zone := range managedZones {
 		zoneRecords, err := p.client.ListRecords(zone)
 		if err != nil {
 			return nil, err
@@ -70,10 +79,15 @@ func splitToZoneAndName(domain string, managedZones []string) (string, string, e
 }
 
 func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
+	managedZones, err := p.zones.Zones(ctx)
+	if err != nil {
+		p.logger.Error("Error discovering zones", zap.Error(err))
+		return err
+	}
 	errors := []error{}
 	for _, endpoint := range changes.Create {
 		for _, target := range endpoint.Targets {
-			rr, zone, err := endpointToRR(p.zones, *endpoint, target)
+			rr, zone, err := endpointToRR(managedZones, *endpoint, target)
 			if err != nil {
 				p.logger.Error("Failed converting endpoint target to RR",
 					zap.String("dnsName", endpoint.DNSName),
@@ -115,7 +129,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 		return nil
 	}
 	existingRecords := []client.Record{}
-	for _, zone := range p.zones {
+	for _, zone := range managedZones {
 		p.logger.Debug("listing records", zap.String("zone", zone))
 		zoneRecords, err := p.client.ListRecords(zone)
 		if err != nil {
@@ -132,7 +146,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 				zap.String("dnsName", current.DNSName),
 				zap.String("target", target),
 			)
-			record, err := findRecord(p.zones, existingRecords, *current, target)
+			record, err := findRecord(managedZones, existingRecords, *current, target)
 			if err != nil {
 				p.logger.Error("Error finding existing record",
 					zap.String("dnsName", current.DNSName),
@@ -156,7 +170,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 			}
 		}
 		for _, target := range add {
-			rr, zone, err := endpointToRR(p.zones, *desired, target)
+			rr, zone, err := endpointToRR(managedZones, *desired, target)
 			if err != nil {
 				p.logger.Error("Failed converting endpoint target to RR",
 					zap.String("dnsName", current.DNSName),
@@ -189,7 +203,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 			}
 		}
 		for _, target := range leave {
-			record, err := findRecord(p.zones, existingRecords, *current, target)
+			record, err := findRecord(managedZones, existingRecords, *current, target)
 			if err != nil {
 				p.logger.Error("Error finding record",
 					zap.String("dnsName", current.DNSName),
@@ -199,7 +213,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 				errors = append(errors, err)
 				continue
 			}
-			rr, _, err := endpointToRR(p.zones, *desired, target)
+			rr, _, err := endpointToRR(managedZones, *desired, target)
 			if err != nil {
 				p.logger.Error("Failed converting endpoint target to RR",
 					zap.String("dnsName", current.DNSName),

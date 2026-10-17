@@ -6,6 +6,7 @@ option go_package = "github.com/sneakybugs/corewarden/api/resolver";
 
 service Resolver {
 	rpc Resolve(Question) returns (Response) {}
+	rpc ListZones(ListZonesRequest) returns (ListZonesResponse) {}
 }
 
 message Question {
@@ -18,4 +19,10 @@ message Response {
 	repeated string answer = 1;
 	repeated string ns = 2;
 	repeated string extra = 3;
+}
+
+message ListZonesRequest {}
+
+message ListZonesResponse {
+	repeated string zones = 1;
 }

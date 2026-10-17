@@ -13,6 +13,7 @@ import (
 
 	"github.com/sneakybugs/corewarden/api/services/records"
 	"github.com/sneakybugs/corewarden/api/services/rest"
+	"github.com/sneakybugs/corewarden/api/services/zones"
 	"github.com/miekg/dns"
 )
 
@@ -472,4 +473,39 @@ func (c *APIClient) ListRecords(zone string) ([]Record, error) {
 	}
 
 	return records, nil
+}
+
+func (c *APIClient) ListZones() ([]string, error) {
+	params := struct{}{}
+	req, err := paramsToRequest(
+		"GET",
+		fmt.Sprintf("%s/zones", c.endpoint),
+		params,
+		c.credentials,
+	)
+	if err != nil {
+		return nil, err
+	}
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	apiErr, parsingErr := parseErrorResponse(res, params)
+	if parsingErr != nil {
+		return nil, parsingErr
+	}
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var parsedZones zones.ZonesResponse
+	if err = json.Unmarshal(body, &parsedZones); err != nil {
+		return nil, err
+	}
+	return parsedZones.Zones, nil
 }

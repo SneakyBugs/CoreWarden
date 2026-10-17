@@ -6,6 +6,10 @@ config:
   policies: |-
     p, alice, records, example.com., edit
     p, alice, records, example.com., read
+    p, alice, zones, example.com., read
+  # Zones enabled for injection. Records outside of these zones are not resolved by CoreDNS.
+  zones:
+    - example.com
   serviceAccounts:
     # alice:debug
     - id: alice

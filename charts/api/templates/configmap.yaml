@@ -16,6 +16,12 @@ data:
         secret-hash: {{ quote .secretHash }}
     {{- end }}
     {{- end }}
+    {{- with .Values.config.zones }}
+    zones:
+    {{- range . }}
+      - {{ quote . }}
+    {{- end }}
+    {{- end }}
   postgresHost: {{ quote .Values.config.postgres.host }}
   postgresPort: {{ quote .Values.config.postgres.port }}
   postgresDatabase: {{ quote .Values.config.postgres.database }}

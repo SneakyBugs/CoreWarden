@@ -52,6 +52,36 @@ service-accounts:
     secretHash: $2a$10$oxkrhLEncFfx.dCbdmpKk.oGX88sxA7T58k8VMNJ2Bgd4uk17UPCq
 ```
 
+## `zones`
+
+Zones enabled for injection.
+CoreDNS only queries the API for names inside these zones, and the ExternalDNS webhook discovers the zones it manages from this list.
+`GET /v1/zones` returns only zones the service account has `zones` read policy for.
+Zones are returned as FQDNs, a trailing dot is added when missing.
+Defaults to no zones, in which case CoreDNS does not resolve injected records.
+
+Zones are not enforced by the records API or the resolver.
+Records can be created and resolved in zones missing from this list.
+
+Can be set through `DNSAPI_ZONES` environment variable, separate zones with whitespace.
+
+#### Example
+
+Usage as command line flag:
+
+```
+api --zones example.com --zones example.net
+```
+
+Usage from YAML config:
+
+```yaml
+# Inside dns-api.yaml
+zones:
+  - example.com
+  - example.net
+```
+
 ## `policy-file`
 
 Sets the authorization policy file. Must be `csv` file [of the format specified in the Authorization refernece guide.]({{< relref "api-authorization" >}})

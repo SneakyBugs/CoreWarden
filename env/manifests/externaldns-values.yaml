@@ -25,11 +25,6 @@ provider:
           secretKeyRef:
             name: webhook-credentials
             key: secret
-      - name: WEBHOOK_ZONES
-        valueFrom:
-          configMapKeyRef:
-            name: webhook
-            key: zones
       - name: WEBHOOK_VERBOSE
         value: "true"
     livenessProbe:

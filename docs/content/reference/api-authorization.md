@@ -21,6 +21,15 @@ p, bob, records, example.com., read
 p, bob, records, example.com., edit
 ```
 
+The `zones` object controls zone discovery.
+`GET /v1/zones` lists only the configured zones the subject has `read` on:
+
+```csv
+p, bob, zones, example.com., read
+```
+
+The ExternalDNS webhook service account needs `zones` read on every zone it manages, in addition to `records` read and edit.
+
 ## Roles
 
 Group lines define user presence in groups.

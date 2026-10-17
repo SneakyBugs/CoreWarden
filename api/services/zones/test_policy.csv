@@ -1,0 +1,6 @@
+p, alice, records, example.com., edit
+p, alice, records, example.com., read
+p, alice, zones, example.com., read
+p, bob, records, example.net., edit
+p, bob, records, example.net., read
+p, carol, zones, example.net., read

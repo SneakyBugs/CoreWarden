@@ -17,6 +17,7 @@ import (
 	"github.com/sneakybugs/corewarden/api/services/logger"
 	"github.com/sneakybugs/corewarden/api/services/rest"
 	"github.com/sneakybugs/corewarden/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/zones"
 	"go.uber.org/fx"
 )
 
@@ -804,8 +805,45 @@ func TestListRecordsForbidden(t *testing.T) {
 	}
 }
 
-func createTestHandler(returnError error) http.Handler {
+func TestRecordsIgnoreConfiguredZones(t *testing.T) {
+	h := createTestHandler(nil, zones.Options{Zones: []string{"example.net."}})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/records",
+		strings.NewReader(`{"zone": "example.com.", "content": "@ A 127.0.0.1", "comment": "test"}`),
+	)
+	auth.MockLogin(r, "alice")
+	r.Header.Add("Content-Type", "application/json")
+	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
+	if w.Result().StatusCode != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Result().StatusCode)
+	}
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodGet, "/v1/records?zone=example.com.", nil)
+	auth.MockLogin(r, "alice")
+	h.ServeHTTP(w, r)
+	validateResponseBody(t, r, w.Result())
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Result().StatusCode)
+	}
+	var response []RecordResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(response) != 1 {
+		t.Fatalf("Expected length to be 1, got %d", len(response))
+	}
+}
+
+func createTestHandler(returnError error, zoneOptions ...zones.Options) http.Handler {
 	var handler *chi.Mux
+	zoneOption := zones.Options{}
+	if len(zoneOptions) > 0 {
+		zoneOption = zoneOptions[0]
+	}
 	_ = fx.New(
 		fx.Supply(
 			storage.MockStorageOptions{
@@ -817,6 +855,7 @@ func createTestHandler(returnError error) http.Handler {
 			logger.Options{
 				DevelopmentMode: true,
 			},
+			zoneOption,
 		),
 		fx.Provide(
 			logger.NewService,
@@ -828,6 +867,7 @@ func createTestHandler(returnError error) http.Handler {
 		),
 		fx.Invoke(
 			Register,
+			zones.Register,
 		),
 		fx.Populate(
 			&handler,

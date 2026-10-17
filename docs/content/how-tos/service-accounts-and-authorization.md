@@ -38,6 +38,7 @@ config:
   policies: |-
     p, example-user, records, example.com., read
     p, example-user, records, example.com., edit
+    p, example-user, zones, example.com., read
 ```
 
 ## Applying the config

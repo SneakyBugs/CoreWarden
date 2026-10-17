@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 	"testing"
 
 	"github.com/miekg/dns"
@@ -11,6 +12,7 @@ import (
 	grpcs "github.com/sneakybugs/corewarden/api/services/grpc"
 	"github.com/sneakybugs/corewarden/api/services/logger"
 	"github.com/sneakybugs/corewarden/api/services/storage"
+	"github.com/sneakybugs/corewarden/api/services/zones"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -73,7 +75,52 @@ func TestResolveServerError(t *testing.T) {
 	}
 }
 
-func createTestClient(t *testing.T, returnError error) (resolver.ResolverClient, func(context.Context)) {
+func TestListZones(t *testing.T) {
+	client, closer := createTestClient(t, nil, "example.com", "Example.NET.")
+	defer closer(context.Background())
+
+	resp, err := client.ListZones(context.Background(), &resolver.ListZonesRequest{})
+	if err != nil {
+		t.Fatalf("failed list zones request: %v", err)
+	}
+	if !slices.Equal(resp.Zones, []string{"example.com.", "example.net."}) {
+		t.Errorf("unexpected zones: %v", resp.Zones)
+	}
+}
+
+func TestListZonesEmpty(t *testing.T) {
+	client, closer := createTestClient(t, nil)
+	defer closer(context.Background())
+
+	resp, err := client.ListZones(context.Background(), &resolver.ListZonesRequest{})
+	if err != nil {
+		t.Fatalf("failed list zones request: %v", err)
+	}
+	if len(resp.Zones) != 0 {
+		t.Errorf("expected no zones, got %v", resp.Zones)
+	}
+}
+
+func TestResolveIgnoresConfiguredZones(t *testing.T) {
+	client, closer := createTestClient(t, nil, "example.net.")
+	defer closer(context.Background())
+
+	resp, err := client.Resolve(
+		context.Background(),
+		&resolver.Question{
+			Name:  "foo.example.com.",
+			Qtype: uint32(dns.TypeA),
+		},
+	)
+	if err != nil {
+		t.Fatalf("failed resolve request: %v", err)
+	}
+	if len(resp.Answer) != 1 {
+		t.Fatalf("expected answer length 1, got %d\n", len(resp.Answer))
+	}
+}
+
+func createTestClient(t *testing.T, returnError error, configuredZones ...string) (resolver.ResolverClient, func(context.Context)) {
 	lis := bufconn.Listen(10 * 1024 * 1024)
 	var store storage.Storage
 	app := fx.New(
@@ -83,6 +130,9 @@ func createTestClient(t *testing.T, returnError error) (resolver.ResolverClient,
 			},
 			logger.Options{
 				DevelopmentMode: true,
+			},
+			zones.Options{
+				Zones: configuredZones,
 			},
 		),
 		fx.Provide(

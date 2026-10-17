@@ -12,6 +12,8 @@ servers:
 tags:
   - name: records
     description: Manage DNS records
+  - name: zones
+    description: Discover zones
 paths:
   /records:
     get:
@@ -170,8 +172,41 @@ paths:
                 $ref: "#/components/schemas/Error"
       security:
         - ServiceAccount: ["p, <sub>, records, <zone>, edit"]
+  /zones:
+    get:
+      summary: List zones
+      description: List zones enabled for injection that the service account has zones read policy for
+      operationId: ListZones
+      tags:
+        - zones
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZoneList"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - ServiceAccount: ["p, <sub>, zones, <zone>, read"]
 components:
   schemas:
+    ZoneList:
+      type: object
+      properties:
+        zones:
+          type: array
+          items:
+            type: string
+            format: FQDN
+          examples: [["example.com.", "example.net."]]
+      required:
+        - zones
     Record:
       type: object
       properties:

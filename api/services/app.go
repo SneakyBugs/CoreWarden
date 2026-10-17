@@ -13,6 +13,7 @@ import (
 	"github.com/sneakybugs/corewarden/api/services/rest"
 	"github.com/sneakybugs/corewarden/api/services/storage"
 	"github.com/sneakybugs/corewarden/api/services/telemetry"
+	"github.com/sneakybugs/corewarden/api/services/zones"
 	"go.uber.org/fx"
 )
 
@@ -27,6 +28,7 @@ type Options struct {
 	PolicyFile       string
 	ServiceAccounts  []auth.ServiceAccount
 	Verbose          bool
+	Zones            []string
 }
 
 func NewApp(options Options) *fx.App {
@@ -57,6 +59,9 @@ func NewApp(options Options) *fx.App {
 			logger.Options{
 				DevelopmentMode: options.Verbose,
 			},
+			zones.Options{
+				Zones: options.Zones,
+			},
 		),
 		fx.Provide(
 			grpc.NewListener,
@@ -74,6 +79,7 @@ func NewApp(options Options) *fx.App {
 			telemetry.Register,
 			resolver.Register,
 			records.Register,
+			zones.Register,
 			health.Register,
 		),
 		fx.WithLogger(

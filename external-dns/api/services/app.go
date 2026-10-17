@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/sneakybugs/corewarden/api/services/health"
 	"github.com/sneakybugs/corewarden/api/services/logger"
 	"github.com/sneakybugs/corewarden/api/services/rest"
@@ -12,7 +14,7 @@ type Options struct {
 	APIEndpoint string
 	ID          string
 	Secret      string
-	Zones       string
+	ZonesTTL    time.Duration
 	Port        uint16
 	Verbose     bool
 }
@@ -27,7 +29,7 @@ func NewApp(options Options) *fx.App {
 				APIEndpoint: options.APIEndpoint,
 				ID:          options.ID,
 				Secret:      options.Secret,
-				Zones:       options.Zones,
+				ZonesTTL:    options.ZonesTTL,
 			},
 			logger.Options{
 				DevelopmentMode: options.Verbose,

@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"io"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
@@ -14,7 +15,7 @@ type Options struct {
 	APIEndpoint string
 	ID          string
 	Secret      string
-	Zones       string
+	ZonesTTL    time.Duration
 	BindAddress string
 }
 
@@ -23,7 +24,7 @@ func Register(o Options, r *chi.Mux, l *zap.Logger) error {
 		APIEndpoint: o.APIEndpoint,
 		ID:          o.ID,
 		Secret:      o.Secret,
-		Zones:       o.Zones,
+		ZonesTTL:    o.ZonesTTL,
 		Logger:      l,
 	})
 	if err != nil {

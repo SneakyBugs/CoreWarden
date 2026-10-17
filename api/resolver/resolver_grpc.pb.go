@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ResolverClient interface {
 	Resolve(ctx context.Context, in *Question, opts ...grpc.CallOption) (*Response, error)
+	ListZones(ctx context.Context, in *ListZonesRequest, opts ...grpc.CallOption) (*ListZonesResponse, error)
 }
 
 type resolverClient struct {
@@ -42,11 +43,21 @@ func (c *resolverClient) Resolve(ctx context.Context, in *Question, opts ...grpc
 	return out, nil
 }
 
+func (c *resolverClient) ListZones(ctx context.Context, in *ListZonesRequest, opts ...grpc.CallOption) (*ListZonesResponse, error) {
+	out := new(ListZonesResponse)
+	err := c.cc.Invoke(ctx, "/resolver.Resolver/ListZones", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ResolverServer is the server API for Resolver service.
 // All implementations must embed UnimplementedResolverServer
 // for forward compatibility
 type ResolverServer interface {
 	Resolve(context.Context, *Question) (*Response, error)
+	ListZones(context.Context, *ListZonesRequest) (*ListZonesResponse, error)
 	mustEmbedUnimplementedResolverServer()
 }
 
@@ -56,6 +67,9 @@ type UnimplementedResolverServer struct {
 
 func (UnimplementedResolverServer) Resolve(context.Context, *Question) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Resolve not implemented")
+}
+func (UnimplementedResolverServer) ListZones(context.Context, *ListZonesRequest) (*ListZonesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListZones not implemented")
 }
 func (UnimplementedResolverServer) mustEmbedUnimplementedResolverServer() {}
 
@@ -88,6 +102,24 @@ func _Resolver_Resolve_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Resolver_ListZones_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListZonesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResolverServer).ListZones(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/resolver.Resolver/ListZones",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResolverServer).ListZones(ctx, req.(*ListZonesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Resolver_ServiceDesc is the grpc.ServiceDesc for Resolver service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -98,6 +130,10 @@ var Resolver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Resolve",
 			Handler:    _Resolver_Resolve_Handler,
+		},
+		{
+			MethodName: "ListZones",
+			Handler:    _Resolver_ListZones_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

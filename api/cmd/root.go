@@ -59,6 +59,14 @@ func CreateRootCommand() Command {
 				}
 			}
 
+			zones := cfg.GetStringSlice("zones")
+			for i, zone := range zones {
+				if strings.TrimSpace(zone) == "" {
+					fmt.Printf("zones[%d] must not be empty\n", i)
+					os.Exit(1)
+				}
+			}
+
 			app := services.NewApp(services.Options{
 				GRPCPort:         cfg.GetUint16("grpc-port"),
 				HTTPPort:         cfg.GetUint16("http-port"),
@@ -70,6 +78,7 @@ func CreateRootCommand() Command {
 				PolicyFile:       cfg.GetString("policy-file"),
 				ServiceAccounts:  parsedServiceAccounts,
 				Verbose:          cfg.GetBool("verbose"),
+				Zones:            zones,
 			})
 			app.Run()
 		},
@@ -109,6 +118,10 @@ func CreateRootCommand() Command {
 	cmd.Flags().Bool("verbose", false, "Enable verbose debug logging")
 	_ = cfg.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
 	cfg.SetDefault("verbose", false)
+
+	cmd.Flags().StringSlice("zones", nil, "Zones enabled for injection")
+	_ = cfg.BindPFlag("zones", cmd.Flags().Lookup("zones"))
+	cfg.SetDefault("zones", []string{})
 
 	cobra.OnInitialize(func() {
 		if configFile != "" {

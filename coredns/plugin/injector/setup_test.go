@@ -28,3 +28,23 @@ func TestSetupNoBlock(t *testing.T) {
 		t.Fatalf("expected an error, got nil")
 	}
 }
+
+func TestSetupZonesTTL(t *testing.T) {
+	c := caddy.NewTestController("dns", `injector {
+		target example.com:6000
+		zones_ttl 10s
+	}`)
+	if err := setup(c); err != nil {
+		t.Fatalf("expected no errors, got: %v", err)
+	}
+}
+
+func TestSetupInvalidZonesTTL(t *testing.T) {
+	c := caddy.NewTestController("dns", `injector {
+		target example.com:6000
+		zones_ttl nope
+	}`)
+	if err := setup(c); err == nil {
+		t.Fatalf("expected an error, got nil")
+	}
+}

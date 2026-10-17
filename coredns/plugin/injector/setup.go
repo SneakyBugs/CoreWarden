@@ -1,11 +1,14 @@
 package injector
 
 import (
+	"time"
+
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/upstream"
 	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
+	"github.com/sneakybugs/corewarden/coredns/plugin/injector/zones"
 	"github.com/sneakybugs/corewarden/coredns/plugin/slog"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -18,6 +21,7 @@ func init() {
 
 func setup(c *caddy.Controller) error {
 	target := ""
+	zonesTTL := 30 * time.Second
 
 	for c.Next() {
 		for c.NextBlock() {
@@ -28,6 +32,16 @@ func setup(c *caddy.Controller) error {
 					return c.ArgErr()
 				}
 				target = args[0]
+			case "zones_ttl":
+				args := c.RemainingArgs()
+				if len(args) != 1 {
+					return c.ArgErr()
+				}
+				ttl, err := time.ParseDuration(args[0])
+				if err != nil {
+					return plugin.Error(name, c.Errf("invalid zones_ttl %q: %v", args[0], err))
+				}
+				zonesTTL = ttl
 			default:
 				return plugin.Error(name, c.Errf("unknown property %q", c.Val()))
 			}
@@ -53,6 +67,7 @@ func setup(c *caddy.Controller) error {
 		logger:   logger,
 		client:   client,
 		upstream: upstream.New(),
+		zones:    zones.NewCache(grpcProvider{client}, zonesTTL),
 	}
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		injectorPlugin.next = next

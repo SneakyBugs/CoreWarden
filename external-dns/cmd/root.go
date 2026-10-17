@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sneakybugs/corewarden/external-dns/api/services"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ func CreateRootCommand() Command {
 				APIEndpoint: cfg.GetString("api-endpoint"),
 				ID:          cfg.GetString("api-id"),
 				Secret:      cfg.GetString("api-secret"),
-				Zones:       cfg.GetString("zones"),
+				ZonesTTL:    cfg.GetDuration("zones-ttl"),
 				Port:        cfg.GetUint16("port"),
 				Verbose:     cfg.GetBool("verbose"),
 			})
@@ -57,8 +58,9 @@ func CreateRootCommand() Command {
 	cmd.Flags().String("api-secret", "", "Secret for API server authentication")
 	_ = cfg.BindPFlag("api-secret", cmd.Flags().Lookup("api-secret"))
 
-	cmd.Flags().String("zones", "", "Comma-separated list of zones managed by the webhook, for example 'example.com.,example.net.'")
-	_ = cfg.BindPFlag("zones", cmd.Flags().Lookup("zones"))
+	cmd.Flags().Duration("zones-ttl", 0, "How long zones discovered from the API are cached (default 30s)")
+	_ = cfg.BindPFlag("zones-ttl", cmd.Flags().Lookup("zones-ttl"))
+	cfg.SetDefault("zones-ttl", 30*time.Second)
 
 	cmd.Flags().Uint16("port", 0, "HTTP server listen port (default 8888)")
 	_ = cfg.BindPFlag("port", cmd.Flags().Lookup("port"))
