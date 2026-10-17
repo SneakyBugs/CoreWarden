@@ -1,6 +1,9 @@
 {{- define "coredns.corefile" -}}
 .:1053 {
-  cache
+  cache {
+    success 9984 3600
+    denial 9984 1800 0
+  }
   errors
   {{- with .Values.config.zones }}
   file /etc/coredns/Zonefile{{ range $zone, $_ := . }} {{ $zone }}{{ end }}

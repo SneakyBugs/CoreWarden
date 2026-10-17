@@ -40,6 +40,7 @@ func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 	discovered, err := i.zones.Zones(ctx)
 	if err != nil {
 		i.logger.Error("failed to discover zones", zap.Error(err))
+		w = uncachedNegativeWriter{w}
 	}
 	if !inZones(discovered, state.Name()) {
 		return plugin.NextOrFailure(i.Name(), i.next, ctx, w, r)
@@ -51,7 +52,7 @@ func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 	})
 	if err != nil {
 		if status.Convert(err).Code() == codes.NotFound {
-			return plugin.NextOrFailure(i.Name(), i.next, ctx, w, r)
+			return plugin.NextOrFailure(i.Name(), i.next, ctx, uncachedNegativeWriter{w}, r)
 		}
 
 		i.logger.Error("grpc error", zap.Error(err))
@@ -92,6 +93,30 @@ func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 	}
 
 	return m.Rcode, w.WriteMsg(m)
+}
+
+// uncachedNegativeWriter zeroes SOA TTLs of negative responses so the cache
+// plugin does not store them.
+type uncachedNegativeWriter struct {
+	dns.ResponseWriter
+}
+
+func (w uncachedNegativeWriter) WriteMsg(m *dns.Msg) error {
+	if isNegative(m) {
+		m = m.Copy()
+		for _, rr := range m.Ns {
+			if soa, ok := rr.(*dns.SOA); ok {
+				soa.Hdr.Ttl = 0
+				soa.Minttl = 0
+			}
+		}
+	}
+	return w.ResponseWriter.WriteMsg(m)
+}
+
+func isNegative(m *dns.Msg) bool {
+	return m.Rcode == dns.RcodeNameError ||
+		(m.Rcode == dns.RcodeSuccess && len(m.Answer) == 0)
 }
 
 func parseRRs(rrs []string) (res []dns.RR, err error) {

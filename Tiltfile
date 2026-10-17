@@ -9,6 +9,9 @@ k8s_yaml(helm('charts/api', name='api', set=[
   "config.postgres.existingSecret.name=corewarden-cluster-app",
   "route.enabled=true",
   "route.parentRefs[0].name=envoy-gateway",
+  "config.serviceAccounts[0].id=alice",
+  # alice:debug
+  "config.serviceAccounts[0].secretHash=$2a$10$iXdFIGyuQXX.vf3icmei6.7pAH9kBCuRnnNyqqq8OUT47cxl.dyEO",
 ]))
 
 docker_build('externaldns-webhook', '.', dockerfile="external-dns/Dockerfile")

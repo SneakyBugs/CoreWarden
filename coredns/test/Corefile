@@ -1,5 +1,8 @@
 . {
-  cache
+  cache {
+    success 9984 3600
+    denial 9984 1800 0
+  }
   errors
   file Zonefile example.com.
   filterlist {

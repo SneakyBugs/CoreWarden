@@ -10,10 +10,7 @@ config:
   # Zones enabled for injection. Records outside of these zones are not resolved by CoreDNS.
   zones:
     - example.com
-  serviceAccounts:
-    # alice:debug
-    - id: alice
-      secretHash: $2a$10$jjolj440dNTg3ZdgjXKJ2ODhE3zF6nWm.HVBTbD09OF75wrSWAQiy
+  serviceAccounts: []
   postgres:
     host: corewarden-cluster-rw
     port: 5432
