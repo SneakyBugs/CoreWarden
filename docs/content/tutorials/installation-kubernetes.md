@@ -101,9 +101,8 @@ config:
     database: api
     user: api
     password: secret_value
-ingress:
-  enabled: true
-  host: dns.example.com
+service:
+  type: LoadBalancer
 ```
 
 Install the `api` chart:
@@ -114,14 +113,20 @@ helm upgrade --install corewarden-api oci://ghcr.io/sneakybugs/corewarden-api-ch
 
 #### Notes for production deployment
 
-It is recommended to use Cert Manager to issue TLS certificates for the API server:
+Expose the API server using the chart's Gateway API route instead of a
+LoadBalancer Service:
 
 ```yaml
 # Inside api-values.yaml
-ingress:
-  annotations:
-    cert-manager.io/cluster-issuer: example-issuer
+route:
+  enabled: true
+  hostname: dns.example.com
+  parentRefs:
+    - name: <your-gateway>
 ```
+
+This requires a Gateway API implementation and a `Gateway` on the cluster.
+Configure TLS on the `Gateway` listener.
 
 ### CoreDNS server installation
 

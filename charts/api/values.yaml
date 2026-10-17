@@ -53,21 +53,10 @@ service:
   grpcPort: 6969
   httpPort: 6970
 
-ingress:
-  enabled: false
-  # host: chart-example.local
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
-
 route:
   enabled: false
   parentRefs:
-    - name: traefik-gateway
+    - name: envoy-gateway
   # hostname: chart-example.local
 
 resources:

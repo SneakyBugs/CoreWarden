@@ -21,7 +21,7 @@ options:
         nodeFilters:
           - server:*
 
-# Expose ports 80 via 8080 and 443 via 8443.
+# Expose ports 80 via 3080 and 443 via 3443.
 ports:
   - port: 3080:80
     nodeFilters:
@@ -72,17 +72,54 @@ resource "kubernetes_secret" "postgres_credentials" {
   }
 }
 
-resource "helm_release" "traefik" {
-  name             = "traefik"
-  repository       = "oci://ghcr.io/traefik/helm"
-  chart            = "traefik"
-  namespace        = "traefik-system"
+resource "helm_release" "envoy_gateway" {
+  name             = "envoy-gateway"
+  repository       = "oci://docker.io/envoyproxy"
+  chart            = "gateway-helm"
+  version          = "1.9.2"
+  namespace        = "envoy-gateway-system"
   create_namespace = true
   wait             = true
+}
 
-  set {
-    name  = "providers.kubernetesGateway.enabled"
-    value = true
+resource "kubernetes_manifest" "gateway_class" {
+  depends_on = [helm_release.envoy_gateway]
+
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "GatewayClass"
+    metadata = {
+      name = "envoy-gateway"
+    }
+    spec = {
+      controllerName = "gateway.envoyproxy.io/gatewayclass-controller"
+    }
+  }
+}
+
+resource "kubernetes_manifest" "gateway" {
+  depends_on = [kubernetes_manifest.gateway_class]
+
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "Gateway"
+    metadata = {
+      name      = "envoy-gateway"
+      namespace = "default"
+    }
+    spec = {
+      gatewayClassName = "envoy-gateway"
+      listeners = [{
+        name     = "http"
+        protocol = "HTTP"
+        port     = 80
+        allowedRoutes = {
+          namespaces = {
+            from = "Same"
+          }
+        }
+      }]
+    }
   }
 }
 
@@ -90,6 +127,7 @@ resource "helm_release" "cloudnative_pg" {
   name             = "cloudnative-pg"
   repository       = "https://cloudnative-pg.github.io/charts"
   chart            = "cloudnative-pg"
+  version          = "0.29.1"
   namespace        = "cnpg-system"
   create_namespace = true
   wait             = true
@@ -100,6 +138,7 @@ resource "helm_release" "pg" {
   name       = "corewarden"
   repository = "https://cloudnative-pg.github.io/charts"
   chart      = "cluster"
+  version    = "0.9.0"
   wait       = true
   values = [
     <<EOF

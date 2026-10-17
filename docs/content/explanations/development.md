@@ -16,19 +16,29 @@ Go into the `env` directory:
 cd env
 ```
 
-Initialize and apply the Terraform module:
+Initialize the OpenTofu module:
 
 ```
-terraform init
-sudo terraform apply
+tofu init
 ```
 
-Change the ownership of the kubeconfig file to give yourself permission for it,
-and set the `KUBECONFIG` environment variable to point to the kubeconfig file to
+The Gateway resources need the cluster and Gateway API CRDs to exist at plan
+time. On a fresh environment, first create the cluster and install Envoy Gateway:
+
+```
+tofu apply -target=helm_release.envoy_gateway
+```
+
+Apply the full module (a single step for all subsequent applies):
+
+```
+tofu apply
+```
+
+Set the `KUBECONFIG` environment variable to point to the kubeconfig file to
 configure `kubectl` and Tilt to use it.
 
 ```
-sudo chown <your-user> kubeconfig.yaml
 export KUBECONFIG=$(pwd)/kubeconfig.yaml
 ```
 
@@ -36,7 +46,7 @@ Go back to the project root directory and bring Tilt up:
 
 ```
 cd ..
-sudo tilt up
+tilt up
 ```
 
 Open the Tilt dashboard in your browser.

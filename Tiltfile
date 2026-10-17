@@ -7,6 +7,8 @@ docker_build('api', '.', dockerfile="api/Dockerfile")
 k8s_yaml(helm('charts/api', name='api', set=[
   "image.repository=api",
   "config.postgres.existingSecret.name=corewarden-cluster-app",
+  "route.enabled=true",
+  "route.parentRefs[0].name=envoy-gateway",
 ]))
 
 docker_build('externaldns-webhook', '.', dockerfile="external-dns/Dockerfile")
@@ -16,7 +18,7 @@ helm_resource(
   "external-dns",
 	"external-dns-repo/external-dns",
 	namespace="external-dns",
-	flags=["--values=env/manifests/externaldns-values.yaml"],
+	flags=["--version=1.23.0", "--values=env/manifests/externaldns-values.yaml"],
 	image_deps=["externaldns-webhook"],
 	image_keys=[
     ("provider.webhook.image.repository", "provider.webhook.image.tag"),
