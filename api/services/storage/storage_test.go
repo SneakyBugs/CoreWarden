@@ -5,14 +5,22 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/miekg/dns"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/sneakybugs/corewarden/api/database"
 	"github.com/sneakybugs/corewarden/api/services/health"
+	"github.com/sneakybugs/corewarden/api/services/rest"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 func toRRString(t *testing.T, rr string) string {
@@ -552,24 +560,43 @@ func createTestStorage() (s Storage, closer func(context.Context)) {
 		panic(err)
 	}
 
+	var handler *chi.Mux
 	app := fx.New(
 		fx.Supply(
 			Options{
 				ConnectionString: "postgres://development:development@localhost:5432/development?sslmode=disable",
 			},
+			zap.NewNop(),
 		),
 		fx.Provide(
+			rest.NewMockService,
 			health.NewReadinessChecks,
 			NewService,
 		),
+		fx.Invoke(
+			health.Register,
+		),
 		fx.Populate(
 			&s,
+			&handler,
 		),
 		fx.NopLogger,
 	)
-	go func() {
-		app.Run()
-	}()
+	if err := app.Start(context.Background()); err != nil {
+		panic(err)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/-/readiness", nil))
+		if w.Result().StatusCode == http.StatusOK {
+			break
+		}
+		if time.Now().After(deadline) {
+			panic("storage did not become ready")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	closer = func(ctx context.Context) {
 		err := app.Stop(ctx)
 		if err != nil {
@@ -578,4 +605,83 @@ func createTestStorage() (s Storage, closer func(context.Context)) {
 	}
 
 	return
+}
+
+func TestStorageReadyAfterDatabaseBecomesAvailable(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to reserve port: %v\n", err)
+	}
+	addr := l.Addr().String()
+	_ = l.Close()
+
+	var handler *chi.Mux
+	app := fx.New(
+		fx.Supply(
+			Options{
+				ConnectionString: fmt.Sprintf("postgres://development:development@%s/development?sslmode=disable", addr),
+			},
+			zap.NewNop(),
+		),
+		fx.Provide(
+			rest.NewMockService,
+			health.NewReadinessChecks,
+			NewService,
+		),
+		fx.Invoke(
+			health.Register,
+			func(Storage) {},
+		),
+		fx.Populate(&handler),
+		fx.NopLogger,
+	)
+	ctx := context.Background()
+	if err := app.Start(ctx); err != nil {
+		t.Fatalf("expected start to succeed with database down, got %v\n", err)
+	}
+	defer func() { _ = app.Stop(ctx) }()
+
+	readiness := func() int {
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/-/readiness", nil))
+		return w.Result().StatusCode
+	}
+	if code := readiness(); code != http.StatusInternalServerError {
+		t.Fatalf("expected status code 500 while database is down, got %d\n", code)
+	}
+
+	time.Sleep(2 * time.Second)
+	proxy, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("failed to listen on %s: %v\n", addr, err)
+	}
+	defer func() { _ = proxy.Close() }()
+	go forward(proxy, "localhost:5432")
+
+	deadline := time.Now().Add(15 * time.Second)
+	for readiness() != http.StatusOK {
+		if time.Now().After(deadline) {
+			t.Fatalf("expected readiness to become 200 after database came up\n")
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func forward(l net.Listener, target string) {
+	for {
+		in, err := l.Accept()
+		if err != nil {
+			return
+		}
+		go func() {
+			defer func() { _ = in.Close() }()
+			out, err := net.Dial("tcp", target)
+			if err != nil {
+				return
+			}
+			defer func() { _ = out.Close() }()
+			go func() { _, _ = io.Copy(out, in) }()
+			_, _ = io.Copy(in, out)
+		}()
+	}
 }

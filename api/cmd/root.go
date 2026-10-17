@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -80,7 +81,22 @@ func CreateRootCommand() Command {
 				Verbose:          cfg.GetBool("verbose"),
 				Zones:            zones,
 			})
-			app.Run()
+			ctx, cancel := context.WithTimeout(context.Background(), app.StartTimeout())
+			err = app.Start(ctx)
+			cancel()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+
+			<-app.Done()
+
+			stopCtx, cancel := context.WithTimeout(context.Background(), app.StopTimeout())
+			defer cancel()
+			if err := app.Stop(stopCtx); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 		},
 	}
 

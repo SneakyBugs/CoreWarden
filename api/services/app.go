@@ -85,6 +85,7 @@ func NewApp(options Options) *fx.App {
 		fx.WithLogger(
 			logger.NewFxLogger,
 		),
+		fx.RecoverFromPanics(),
 	)
 	return app
 }
