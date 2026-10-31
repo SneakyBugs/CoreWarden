@@ -161,3 +161,90 @@ func TestNegativeResponseIsNotCachedWhenZonesUnavailable(t *testing.T) {
 	query(t, chain, "foo.example.com.", dns.TypeA)
 	h.AssertDone()
 }
+
+func soaQuery(zone string) dns.Msg {
+	m := dns.Msg{}
+	m.SetQuestion(zone, dns.TypeSOA)
+	return m
+}
+
+func TestNoDataFromResolver(t *testing.T) {
+	apiSOA := "example.com. 3600 IN SOA ns.example.com. noc.example.com. 1 7200 3600 1209600 3600"
+	upstreamSOA, _ := dns.NewRR("example.com. 3600 IN SOA ns.upstream.net. hostmaster.upstream.net. 42 7200 3600 1209600 300")
+	upstreamResponse := soaQuery("example.com.")
+	upstreamResponse.Response = true
+	upstreamResponse.Answer = []dns.RR{upstreamSOA}
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In:     &resolver.Question{Name: "foo.example.com.", Qtype: uint32(dns.TypeAAAA)},
+			Result: &resolver.Response{Ns: []string{apiSOA}},
+		},
+		{
+			In:     &resolver.Question{Name: "foo.example.com.", Qtype: uint32(dns.TypeAAAA)},
+			Result: &resolver.Response{Answer: []string{"foo.example.com. 60 IN AAAA ::1"}},
+		},
+	})
+	h := NewMockHandler(t, []MockHandlerAction{{In: soaQuery("example.com."), Out: upstreamResponse}})
+	i := Injector{
+		zones:  newTestZones("example.com."),
+		client: &r,
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+	chain := newCachedChain(t, &i)
+
+	first := query(t, chain, "foo.example.com.", dns.TypeAAAA)
+	if first.Rcode != dns.RcodeSuccess {
+		t.Fatalf("Expected NOERROR, got %s\n", dns.RcodeToString[first.Rcode])
+	}
+	if len(first.Answer) != 0 {
+		t.Fatalf("Expected empty answer, got %v\n", first.Answer)
+	}
+	if len(first.Ns) != 1 {
+		t.Fatalf("Expected one authority record, got %v\n", first.Ns)
+	}
+	soa, ok := first.Ns[0].(*dns.SOA)
+	if !ok || soa.Ns != "ns.upstream.net." || soa.Serial != 42 {
+		t.Fatalf("Expected upstream SOA in authority, got %v\n", first.Ns)
+	}
+	if soa.Hdr.Ttl != 0 || soa.Minttl != 0 {
+		t.Fatalf("Expected SOA TTL and MINIMUM 0, got %d and %d\n", soa.Hdr.Ttl, soa.Minttl)
+	}
+
+	second := query(t, chain, "foo.example.com.", dns.TypeAAAA)
+	if len(second.Answer) != 1 {
+		t.Fatalf("Expected created record, got %v\n", second.Answer)
+	}
+	r.AssertDone()
+	h.AssertDone()
+}
+
+func TestNoDataKeepsResolverSOAWhenUpstreamHasNone(t *testing.T) {
+	apiSOA := "example.com. 0 IN SOA ns.icann.org. noc.dns.icann.org. 1 7200 3600 1209600 0"
+	servfail := soaQuery("example.com.")
+	servfail.Response = true
+	servfail.Rcode = dns.RcodeServerFailure
+	r := NewMockResolver(t, []MockResolverAction{
+		{
+			In:     &resolver.Question{Name: "foo.example.com.", Qtype: uint32(dns.TypeAAAA)},
+			Result: &resolver.Response{Ns: []string{apiSOA}},
+		},
+	})
+	h := NewMockHandler(t, []MockHandlerAction{{In: soaQuery("example.com."), Out: servfail, Rcode: dns.RcodeServerFailure}})
+	i := Injector{
+		zones:  newTestZones("example.com."),
+		client: &r,
+		logger: zap.NewNop(),
+		next:   &h,
+	}
+
+	res := query(t, &i, "foo.example.com.", dns.TypeAAAA)
+	if res.Rcode != dns.RcodeSuccess || len(res.Answer) != 0 {
+		t.Fatalf("Expected NODATA, got %v\n", res)
+	}
+	if len(res.Ns) != 1 || res.Ns[0].(*dns.SOA).Ns != "ns.icann.org." {
+		t.Fatalf("Expected resolver SOA in authority, got %v\n", res.Ns)
+	}
+	r.AssertDone()
+	h.AssertDone()
+}

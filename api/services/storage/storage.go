@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,66 +37,64 @@ var ResolveRecordNotFoundError = status.Error(
 	"record not found",
 )
 
+// noDataSOA is the SOA without owner for NODATA responses. TTL and MINIMUM
+// are 0 so negative answers are not cached.
+const noDataSOA = "0\tIN\tSOA\tns.icann.org. noc.dns.icann.org. 1 7200 3600 1209600 0"
+
 type PostgresStorage struct {
 	pool    *pgxpool.Pool
 	queries *queries.Queries
 }
 
 func (s *PostgresStorage) Resolve(ctx context.Context, q DNSQuestion) (DNSResponse, error) {
-	r, err := s.queries.ResolveRecord(ctx, queries.ResolveRecordParams{
-		Name: q.Name,
-		Type: int32(q.Qtype),
-	})
+	records, err := s.queries.ResolveRecord(ctx, q.Name)
 	if err != nil {
 		return DNSResponse{}, ResolveServerError
 	}
-	if len(r) != 0 {
-		answer := make([]string, len(r))
-		for i, record := range r {
-			rr, err := replaceName(record.Content, q.Name)
-			if err != nil {
-				return DNSResponse{}, ResolveServerError
-			}
-			answer[i] = rr
+	if len(records) == 0 {
+		records, err = s.queries.ResolveWildcardRecord(ctx, enclosingNames(q.Name))
+		if err != nil {
+			return DNSResponse{}, ResolveServerError
 		}
-		return DNSResponse{Answer: answer}, nil
+		records = closest(records)
 	}
-	labels := dns.SplitDomainName(q.Name)
-	subdomains := make([]string, len(labels))
-	currentSubdomain := ""
-	for i := len(labels) - 1; 0 < i; i-- {
-		currentSubdomain = labels[i] + "." + currentSubdomain
-		subdomains[i] = currentSubdomain
-	}
-	r, err = s.queries.ResolveWildcardRecord(ctx, queries.ResolveWildcardRecordParams{
-		Names: subdomains,
-		Type:  int32(q.Qtype),
-	})
-	if err != nil {
-		return DNSResponse{}, ResolveServerError
-	}
-	if len(r) == 0 {
+	if len(records) == 0 {
 		return DNSResponse{}, ResolveRecordNotFoundError
 	}
-	maxLength := 0
 	answer := []string{}
-	for _, record := range r {
-		if maxLength < len(record.Name) {
-			maxLength = len(record.Name)
-			rr, err := replaceName(record.Content, q.Name)
-			if err != nil {
-				return DNSResponse{}, ResolveServerError
-			}
-			answer = []string{rr}
-		} else if maxLength == len(record.Name) {
-			rr, err := replaceName(record.Content, q.Name)
-			if err != nil {
-				return DNSResponse{}, ResolveServerError
-			}
-			answer = append(answer, rr)
+	for _, record := range records {
+		if record.Type != int32(q.Qtype) && record.Type != int32(dns.TypeCNAME) {
+			continue
 		}
+		rr, err := replaceName(record.Content, q.Name)
+		if err != nil {
+			return DNSResponse{}, ResolveServerError
+		}
+		answer = append(answer, rr)
+	}
+	if len(answer) == 0 {
+		return DNSResponse{NS: []string{records[0].Zone + "\t" + noDataSOA}}, nil
 	}
 	return DNSResponse{Answer: answer}, nil
+}
+
+func enclosingNames(name string) []string {
+	labels := dns.SplitDomainName(name)
+	names := make([]string, 0, len(labels))
+	for i := 1; i < len(labels); i++ {
+		names = append(names, strings.Join(labels[i:], ".")+".")
+	}
+	return names
+}
+
+func closest(records []queries.Record) []queries.Record {
+	longest := 0
+	for _, r := range records {
+		longest = max(longest, len(r.Name))
+	}
+	return slices.DeleteFunc(records, func(r queries.Record) bool {
+		return len(r.Name) != longest
+	})
 }
 
 func replaceName(rr string, newName string) (string, error) {

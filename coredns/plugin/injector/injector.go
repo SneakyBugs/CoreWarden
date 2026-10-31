@@ -6,6 +6,7 @@ import (
 	"github.com/sneakybugs/corewarden/coredns/plugin/injector/resolver"
 	"github.com/sneakybugs/corewarden/coredns/plugin/injector/zones"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
@@ -81,6 +82,17 @@ func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 		return dns.RcodeServerFailure, err
 	}
 
+	if len(m.Answer) == 0 {
+		for idx, rr := range m.Ns {
+			if rr.Header().Rrtype != dns.TypeSOA {
+				continue
+			}
+			if soa := i.nextSOA(ctx, w, rr.Header().Name); soa != nil {
+				m.Ns[idx] = soa
+			}
+		}
+	}
+
 	// Perform CNAME lookup if needed.
 	if len(m.Answer) == 1 && m.Answer[0].Header().Rrtype == dns.TypeCNAME {
 		if record, ok := m.Answer[0].(*dns.CNAME); ok {
@@ -92,7 +104,26 @@ func (i *Injector) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 		}
 	}
 
-	return m.Rcode, w.WriteMsg(m)
+	return m.Rcode, uncachedNegativeWriter{w}.WriteMsg(m)
+}
+
+// nextSOA looks up the SOA of zone through the next plugin, bypassing the
+// injector so a zone owned by the API does not resolve back into it.
+func (i *Injector) nextSOA(ctx context.Context, w dns.ResponseWriter, zone string) *dns.SOA {
+	req := new(dns.Msg)
+	req.SetQuestion(zone, dns.TypeSOA)
+	nw := nonwriter.New(w)
+	if _, err := plugin.NextOrFailure(i.Name(), i.next, ctx, nw, req); err != nil || nw.Msg == nil {
+		i.logger.Warn("upstream SOA lookup failed", zap.String("zone", zone), zap.Error(err))
+		return nil
+	}
+	for _, rr := range append(nw.Msg.Answer, nw.Msg.Ns...) {
+		if soa, ok := rr.(*dns.SOA); ok {
+			return soa
+		}
+	}
+	i.logger.Warn("upstream SOA not found", zap.String("zone", zone))
+	return nil
 }
 
 // uncachedNegativeWriter zeroes SOA TTLs of negative responses so the cache

@@ -51,7 +51,7 @@ func (s *service) Resolve(ctx context.Context, q *resolver.Question) (*resolver.
 	s.logger.Info(
 		"DNS request",
 		zap.String("name", q.Name),
-		zap.Bool("found", true),
+		zap.Bool("found", len(resp.Answer) != 0),
 	)
 	return &resolver.Response{
 		Answer: resp.Answer,

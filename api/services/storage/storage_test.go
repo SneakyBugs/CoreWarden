@@ -21,6 +21,8 @@ import (
 	"github.com/sneakybugs/corewarden/api/services/rest"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func toRRString(t *testing.T, rr string) string {
@@ -683,5 +685,191 @@ func forward(l net.Listener, target string) {
 			go func() { _, _ = io.Copy(out, in) }()
 			_, _ = io.Copy(in, out)
 		}()
+	}
+}
+
+func assertNoData(t *testing.T, res DNSResponse, zone string) {
+	t.Helper()
+	if len(res.Answer) != 0 {
+		t.Fatalf("expected empty answer, got %v\n", res.Answer)
+	}
+	if len(res.NS) != 1 {
+		t.Fatalf("expected one authority record, got %v\n", res.NS)
+	}
+	rr, err := dns.NewRR(res.NS[0])
+	if err != nil {
+		t.Fatalf("failed to parse authority record: %v\n", err)
+	}
+	soa, ok := rr.(*dns.SOA)
+	if !ok {
+		t.Fatalf("expected SOA, got %v\n", rr)
+	}
+	if soa.Hdr.Name != zone {
+		t.Fatalf("expected SOA owner '%s', got '%s'\n", zone, soa.Hdr.Name)
+	}
+	if soa.Hdr.Ttl != 0 || soa.Minttl != 0 {
+		t.Fatalf("expected TTL and MINIMUM 0, got %d and %d\n", soa.Hdr.Ttl, soa.Minttl)
+	}
+}
+
+func TestResolveNoDataForOtherType(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo.example.com.",
+		Qtype: dns.TypeAAAA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	assertNoData(t, res, "example.com.")
+}
+
+func TestResolveNoDataAtApex(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "@ 3600 IN A 127.0.0.1"),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "example.com.",
+		Qtype: dns.TypeTXT,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	assertNoData(t, res, "example.com.")
+}
+
+func TestResolveNoDataForWildcardOtherType(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "*.wildcard 3600 IN A 127.0.0.1"),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo.wildcard.example.com.",
+		Qtype: dns.TypeAAAA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	assertNoData(t, res, "example.com.")
+}
+
+func TestResolveExactNodeHidesWildcard(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	for _, rr := range []string{"*.wildcard 3600 IN AAAA ::1", "foo.wildcard 3600 IN A 127.0.0.1"} {
+		_, err := s.CreateRecord(ctx, RecordCreateParameters{
+			Zone:    "example.com.",
+			RR:      toRRString(t, rr),
+			Comment: "test",
+		})
+		if err != nil {
+			t.Fatalf("failed to create record: %v\n", err)
+		}
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo.wildcard.example.com.",
+		Qtype: dns.TypeAAAA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	assertNoData(t, res, "example.com.")
+}
+
+func TestResolveClosestWildcardHidesFartherWildcard(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	for _, rr := range []string{"*.wildcard 3600 IN AAAA ::1", "*.bar.wildcard 3600 IN A 127.0.0.1"} {
+		_, err := s.CreateRecord(ctx, RecordCreateParameters{
+			Zone:    "example.com.",
+			RR:      toRRString(t, rr),
+			Comment: "test",
+		})
+		if err != nil {
+			t.Fatalf("failed to create record: %v\n", err)
+		}
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo.bar.wildcard.example.com.",
+		Qtype: dns.TypeAAAA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	assertNoData(t, res, "example.com.")
+}
+
+func TestResolveWildcardCNAME(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "*.wildcard 3600 IN CNAME target.example.net."),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	res, err := s.Resolve(ctx, DNSQuestion{
+		Name:  "foo.wildcard.example.com.",
+		Qtype: dns.TypeA,
+	})
+	if err != nil {
+		t.Fatalf("failed to resolve: %v\n", err)
+	}
+	expectedAnswer := "foo.wildcard.example.com.\t3600\tIN\tCNAME\ttarget.example.net."
+	if len(res.Answer) != 1 || res.Answer[0] != expectedAnswer {
+		t.Fatalf("expected answer '%s', got %v\n", expectedAnswer, res.Answer)
+	}
+}
+
+func TestResolveNotFoundForUnknownName(t *testing.T) {
+	s, closer := createTestStorage()
+	ctx := context.Background()
+	defer closer(ctx)
+	_, err := s.CreateRecord(ctx, RecordCreateParameters{
+		Zone:    "example.com.",
+		RR:      toRRString(t, "foo 3600 IN A 127.0.0.1"),
+		Comment: "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create record: %v\n", err)
+	}
+	for _, name := range []string{"bar.example.com.", "sub.foo.example.com.", "example.com."} {
+		_, err := s.Resolve(ctx, DNSQuestion{
+			Name:  name,
+			Qtype: dns.TypeA,
+		})
+		if c := status.Convert(err).Code(); c != codes.NotFound {
+			t.Fatalf("expected code %d for %s, got %d\n", codes.NotFound, name, c)
+		}
 	}
 }

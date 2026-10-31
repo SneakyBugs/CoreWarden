@@ -169,16 +169,11 @@ func (q *Queries) ReadRecord(ctx context.Context, id int32) (Record, error) {
 
 const resolveRecord = `-- name: ResolveRecord :many
 SELECT id, zone, content, name, is_wildcard, type, created_at, modified_on, comment FROM Records
-WHERE name = $1 and (type = $2 or type = 5) and is_wildcard = false
+WHERE name = $1 and is_wildcard = false
 `
 
-type ResolveRecordParams struct {
-	Name string
-	Type int32
-}
-
-func (q *Queries) ResolveRecord(ctx context.Context, arg ResolveRecordParams) ([]Record, error) {
-	rows, err := q.db.Query(ctx, resolveRecord, arg.Name, arg.Type)
+func (q *Queries) ResolveRecord(ctx context.Context, name string) ([]Record, error) {
+	rows, err := q.db.Query(ctx, resolveRecord, name)
 	if err != nil {
 		return nil, err
 	}
@@ -209,16 +204,11 @@ func (q *Queries) ResolveRecord(ctx context.Context, arg ResolveRecordParams) ([
 
 const resolveWildcardRecord = `-- name: ResolveWildcardRecord :many
 SELECT id, zone, content, name, is_wildcard, type, created_at, modified_on, comment FROM Records
-WHERE name = ANY($2::text[]) and type = $1 and is_wildcard = true
+WHERE name = ANY($1::text[]) and is_wildcard = true
 `
 
-type ResolveWildcardRecordParams struct {
-	Type  int32
-	Names []string
-}
-
-func (q *Queries) ResolveWildcardRecord(ctx context.Context, arg ResolveWildcardRecordParams) ([]Record, error) {
-	rows, err := q.db.Query(ctx, resolveWildcardRecord, arg.Type, arg.Names)
+func (q *Queries) ResolveWildcardRecord(ctx context.Context, names []string) ([]Record, error) {
+	rows, err := q.db.Query(ctx, resolveWildcardRecord, names)
 	if err != nil {
 		return nil, err
 	}
